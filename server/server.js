@@ -20,13 +20,21 @@ app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes); // Mounts /crops, /market, etc.
 
 // Static Frontend
-app.use(express.static(path.join(__dirname, '../client')));
+// Fallback para React Router (Solo en desarrollo local fuera de Vercel o si Vercel no maneja el static)
+// En Vercel, el rewrite manejará esto, pero es bueno mantenerlo para local.
+if (process.env.NODE_ENV !== 'production') {
+    app.use(express.static(path.join(__dirname, '../frontend/dist')));
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    });
+}
 
-// Fallback
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/index.html'));
-});
+// Exportar app para Vercel
+module.exports = app;
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+// Solo escuchar si se ejecuta directamente
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
+}
