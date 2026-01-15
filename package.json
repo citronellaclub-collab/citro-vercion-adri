@@ -9,7 +9,8 @@
         "client": "serve client",
         "db:push": "npx prisma db push",
         "db:studio": "npx prisma studio",
-        "vercel-build": "echo 'Installing frontend dependencies...' && cd frontend && npm install && npm run build && cd .."
+        "build": "npx prisma generate && cd frontend && npm install && npm run build",
+        "postinstall": "npx prisma generate"
     },
     "keywords": [],
     "author": "",
