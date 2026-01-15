@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Acceso | Cultivo Virtual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css"> <!-- Reusing main styles -->
+
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #0d1117;
+      /* Dark bg */
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 360px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 30px;
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .auth-header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin: 0;
+    }
+
+    .auth-header p {
+      font-size: 14px;
+      color: #8b949e;
+      margin-top: 6px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      color: #f0f6fc;
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 8px 12px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #f0f6fc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
+      border-color: #238636;
+      outline: none;
+    }
+
+    .btn-primary {
+      width: 100%;
+      background: #238636;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: #2ea043;
+    }
+
+    .toggle-auth {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #8b949e;
+    }
+
+    .toggle-auth a {
+      color: #58a6ff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="auth-container">
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <div class="auth-header">
+        <h1>Iniciar Sesión</h1>
+        <p>Bienvenido de nuevo a tu cultivo.</p>
+      </div>
+      <div class="form-group">
+        <label>Usuario</label>
+        <input id="lUser" class="form-input" placeholder="Nombre de usuario">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input id="lPass" type="password" class="form-input" placeholder="••••••••">
+      </div>
+      <button onclick="doLogin()" class="btn-primary">Ingresar</button>
+      <div class="toggle-auth">
+        ¿No tienes cuenta? <a onclick="toggleMode()">Regístrate aquí</a>
+      </div>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" class="hidden">
+      <div class="auth-header">
+        <h1>Crear Cuenta</h1>
+        <p>Únete a la comunidad de cultivadores.</p>
+      </div>
+      <div class="form-group">
+        <label>Usuario</label>
+        <input id="rUser" class="form-input" placeholder="Elige un nombre">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input id="rPass" type="password" class="form-input" placeholder="Mínimo 6 caracteres">
+      </div>
+      <button onclick="doRegister()" class="btn-primary">Registrarse</button>
+      <div class="toggle-auth">
+        ¿Ya tienes cuenta? <a onclick="toggleMode()">Inicia sesión</a>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/state.js"></script>
+  <script>
+    // Auth DOM Logic
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+
+    function toggleMode() {
+      loginForm.classList.toggle('hidden');
+      registerForm.classList.toggle('hidden');
+    }
+
+    async function doLogin() {
+      const u = document.getElementById('lUser').value;
+      const p = document.getElementById('lPass').value;
+      if (!u || !p) return alert("Completa todos los campos");
+
+      const ok = await State.login(u, p);
+      if (ok) location.href = 'index.html';
+    }
+
+    async function doRegister() {
+      const u = document.getElementById('rUser').value;
+      const p = document.getElementById('rPass').value;
+      if (!u || !p) return alert("Completa todos los campos");
+
+      const ok = await State.register(u, p);
+      if (ok) location.href = 'index.html';
+    }
+  </script>
+
+</body>
+
+</html>

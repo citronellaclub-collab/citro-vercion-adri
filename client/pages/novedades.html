@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Novedades</title>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui, sans-serif;
+  background:#0f1115;
+  color:#e5e7eb;
+}
+
+header{
+  padding:16px 24px;
+  border-bottom:1px solid #1f2937;
+  background:#111827;
+}
+
+main{
+  max-width:900px;
+  margin:auto;
+  padding:24px;
+}
+
+.form{
+  background:#111827;
+  border:1px solid #1f2937;
+  border-radius:10px;
+  padding:16px;
+  margin-bottom:24px;
+}
+
+.form input,.form textarea{
+  width:100%;
+  margin-bottom:10px;
+  padding:8px;
+  background:#0f1115;
+  border:1px solid #1f2937;
+  color:#e5e7eb;
+  border-radius:6px;
+}
+
+.form button{
+  background:#2563eb;
+  border:none;
+  padding:8px 14px;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+}
+
+.novedad{
+  background:#111827;
+  border:1px solid #1f2937;
+  border-radius:10px;
+  padding:16px;
+  margin-bottom:16px;
+}
+
+.novedad h3{
+  margin:0 0 6px 0;
+}
+
+.meta{
+  font-size:12px;
+  color:#9ca3af;
+  margin-bottom:10px;
+}
+
+.novedad button{
+  background:none;
+  border:none;
+  color:#f87171;
+  cursor:pointer;
+  font-size:13px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>📰 Novedades</h1>
+</header>
+
+<main>
+
+<!-- FORMULARIO -->
+<div class="form">
+  <input id="titulo" placeholder="Título de la novedad">
+  <textarea id="contenido" rows="4" placeholder="Detalle / anuncio"></textarea>
+  <button onclick="publicar()">Publicar novedad</button>
+</div>
+
+<!-- LISTADO -->
+<div id="lista"></div>
+
+</main>
+
+<script>
+let novedades = JSON.parse(localStorage.getItem("novedades")) || [];
+
+function publicar(){
+  const titulo = document.getElementById("titulo").value.trim();
+  const contenido = document.getElementById("contenido").value.trim();
+  if(!titulo || !contenido) return alert("Completa todos los campos");
+
+  novedades.unshift({
+    id:Date.now(),
+    titulo,
+    contenido,
+    fecha:new Date().toLocaleString()
+  });
+
+  guardar();
+  render();
+  document.getElementById("titulo").value="";
+  document.getElementById("contenido").value="";
+}
+
+function render(){
+  const lista=document.getElementById("lista");
+  lista.innerHTML="";
+
+  novedades.forEach(n=>{
+    lista.innerHTML+=`
+      <article class="novedad">
+        <h3>${n.titulo}</h3>
+        <div class="meta">${n.fecha}</div>
+        <p>${n.contenido}</p>
+        <button onclick="eliminar(${n.id})">🗑 Eliminar</button>
+      </article>
+    `;
+  });
+}
+
+function eliminar(id){
+  if(!confirm("¿Eliminar novedad?")) return;
+  novedades = novedades.filter(n=>n.id!==id);
+  guardar();
+  render();
+}
+
+function guardar(){
+  localStorage.setItem("novedades",JSON.stringify(novedades));
+}
+
+render();
+</script>
+
+</body>
+</html>

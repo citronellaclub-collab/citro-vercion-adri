@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Perfil de Usuario</title>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui, sans-serif;
+  background:#0f1115;
+  color:#e5e7eb;
+}
+
+header{
+  padding:16px 24px;
+  background:#111827;
+  border-bottom:1px solid #1f2937;
+}
+
+main{
+  max-width:900px;
+  margin:auto;
+  padding:24px;
+}
+
+.card{
+  background:#111827;
+  border:1px solid #1f2937;
+  border-radius:12px;
+  padding:20px;
+  margin-bottom:20px;
+}
+
+h2{
+  margin-top:0;
+}
+
+input,textarea,select{
+  width:100%;
+  margin-bottom:10px;
+  padding:8px;
+  background:#0f1115;
+  border:1px solid #1f2937;
+  color:#e5e7eb;
+  border-radius:6px;
+}
+
+button{
+  background:#2563eb;
+  border:none;
+  padding:8px 14px;
+  border-radius:6px;
+  color:white;
+  cursor:pointer;
+}
+
+.avatar{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.avatar img{
+  width:96px;
+  height:96px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid #2563eb;
+}
+
+.meta{
+  font-size:13px;
+  color:#9ca3af;
+}
+
+.borrar{
+  background:#7f1d1d;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>👤 Perfil</h1>
+</header>
+
+<main>
+
+<!-- PERFIL -->
+<div class="card">
+  <h2>Datos del usuario</h2>
+
+  <div class="avatar">
+    <img id="avatar" src="">
+    <input type="file" id="avatarInput" accept="image/*">
+  </div>
+
+  <input id="nombre" placeholder="Nombre de usuario">
+  <input id="email" placeholder="Correo electrónico">
+  <textarea id="bio" rows="3" placeholder="Biografía / descripción"></textarea>
+
+  <button onclick="guardarPerfil()">Guardar perfil</button>
+</div>
+
+<!-- PREFERENCIAS -->
+<div class="card">
+  <h2>Preferencias</h2>
+
+  <label>Tema</label>
+  <select id="tema">
+    <option value="oscuro">Oscuro</option>
+    <option value="claro">Claro</option>
+  </select>
+
+  <label>Rol</label>
+  <select id="rol">
+    <option>Usuario</option>
+    <option>Administrador</option>
+  </select>
+
+  <button onclick="guardarPrefs()">Guardar preferencias</button>
+</div>
+
+<!-- ESTADO -->
+<div class="card">
+  <h2>Estado del sistema</h2>
+  <p class="meta">Datos almacenados localmente</p>
+  <button class="borrar" onclick="resetPerfil()">🗑 Borrar perfil</button>
+</div>
+
+</main>
+
+<script>
+const nombre = document.getElementById("nombre");
+const email = document.getElementById("email");
+const bio = document.getElementById("bio");
+const avatar = document.getElementById("avatar");
+const avatarInput = document.getElementById("avatarInput");
+const tema = document.getElementById("tema");
+const rol = document.getElementById("rol");
+
+/* ===== CARGA ===== */
+function cargar(){
+  nombre.value = localStorage.getItem("perfil_nombre") || "";
+  email.value = localStorage.getItem("perfil_email") || "";
+  bio.value = localStorage.getItem("perfil_bio") || "";
+  tema.value = localStorage.getItem("perfil_tema") || "oscuro";
+  rol.value = localStorage.getItem("perfil_rol") || "Usuario";
+  const img = localStorage.getItem("perfil_avatar");
+  if(img) avatar.src = img;
+}
+cargar();
+
+/* ===== AVATAR ===== */
+avatarInput.onchange = e=>{
+  const f=e.target.files[0];
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=()=> {
+    avatar.src=r.result;
+    localStorage.setItem("perfil_avatar",r.result);
+  };
+  r.readAsDataURL(f);
+};
+
+/* ===== GUARDAR ===== */
+function guardarPerfil(){
+  localStorage.setItem("perfil_nombre",nombre.value);
+  localStorage.setItem("perfil_email",email.value);
+  localStorage.setItem("perfil_bio",bio.value);
+  alert("Perfil guardado");
+}
+
+function guardarPrefs(){
+  localStorage.setItem("perfil_tema",tema.value);
+  localStorage.setItem("perfil_rol",rol.value);
+  alert("Preferencias guardadas");
+}
+
+/* ===== RESET ===== */
+function resetPerfil(){
+  if(!confirm("¿Eliminar perfil completo?")) return;
+  Object.keys(localStorage)
+    .filter(k=>k.startsWith("perfil_"))
+    .forEach(k=>localStorage.removeItem(k));
+  location.reload();
+}
+</script>
+
+</body>
+</html>

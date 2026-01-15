@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Foro | Cultivo Virtual</title>
+
+<link rel="stylesheet" href="../css/styles.css">
+
+<style>
+/* === ESTILO FORO (TU DISEÑO, LIMPIO) === */
+.foro-app {
+  font-family: system-ui, sans-serif;
+  background: #0f1115;
+  color: #e5e7eb;
+  min-height: 100vh;
+}
+
+.foro-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #1f2937;
+}
+
+.foro-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+}
+
+.foro-sidebar {
+  border-right: 1px solid #1f2937;
+  padding: 16px;
+}
+
+.foro-sidebar button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: transparent;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.foro-sidebar button:hover {
+  background: #1f2937;
+}
+
+.foro-main {
+  padding: 24px;
+}
+
+.foro-form {
+  border: 1px solid #1f2937;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  background: #111827;
+}
+
+.foro-form input,
+.foro-form textarea,
+.foro-form select {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 8px;
+  background: #0f1115;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+  border-radius: 6px;
+}
+
+.foro-form button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.foro-post {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.foro-meta {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.foro-post iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-top: 10px;
+  border-radius: 6px;
+}
+
+.foro-actions {
+  margin-top: 10px;
+}
+
+.foro-actions button {
+  background: none;
+  border: none;
+  color: #f87171;
+  cursor: pointer;
+  font-size: 13px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="foro-app">
+
+<header class="foro-header">
+  <h1>📘 Foro de la Comunidad</h1>
+</header>
+
+<div class="foro-layout">
+
+  <aside class="foro-sidebar">
+    <button onclick="Foro.filtrar('Descubrimientos')">🔬 Descubrimientos</button>
+    <button onclick="Foro.filtrar('Investigaciones')">📄 Investigaciones</button>
+    <button onclick="Foro.filtrar('Clases')">🎓 Clases</button>
+    <button onclick="Foro.filtrar('Multimedia')">🎥 Multimedia</button>
+    <button onclick="Foro.filtrar('Todos')">📚 Todos</button>
+  </aside>
+
+  <main class="foro-main">
+
+    <div class="foro-form">
+      <select id="categoria">
+        <option>Descubrimientos</option>
+        <option>Investigaciones</option>
+        <option>Clases</option>
+        <option>Multimedia</option>
+      </select>
+
+      <input id="titulo" placeholder="Título del contenido">
+      <textarea id="contenido" placeholder="Descripción / tema de discusión"></textarea>
+      <input id="youtube" placeholder="Link de YouTube (opcional)">
+      <input type="file" id="archivo">
+      <button onclick="Foro.crearPost()">Publicar</button>
+    </div>
+
+    <div id="feed"></div>
+
+  </main>
+
+</div>
+</div>
+
+<script src="../js/state.js"></script>
+
+<script>
+/* ======================
+   FORO MODULE
+   ====================== */
+const Foro = (() => {
+
+  const STORAGE = 'foro_posts';
+  let posts = JSON.parse(localStorage.getItem(STORAGE)) || [];
+  let filtroActual = 'Todos';
+
+  function crearPost() {
+    const titulo = tituloInput().value.trim();
+    const contenido = contenidoInput().value.trim();
+    const categoria = categoriaInput().value;
+    const youtube = youtubeInput().value.trim();
+    const archivo = archivoInput().files[0];
+
+    if (!titulo || !contenido) {
+      alert('Completa título y contenido');
+      return;
+    }
+
+    const user = window.State?.getUser?.();
+
+    posts.unshift({
+      id: Date.now(),
+      titulo,
+      contenido,
+      categoria,
+      youtube,
+      archivo: archivo ? archivo.name : null,
+      autor: user?.username || 'Usuario',
+      fecha: new Date().toLocaleString()
+    });
+
+    guardar();
+    render();
+    limpiar();
+  }
+
+  function render() {
+    const feed = document.getElementById('feed');
+    feed.innerHTML = '';
+
+    posts
+      .filter(p => filtroActual === 'Todos' || p.categoria === filtroActual)
+      .forEach(p => {
+        feed.innerHTML += `
+          <article class="foro-post">
+            <h3>${p.titulo}</h3>
+            <div class="foro-meta">${p.categoria} · ${p.autor} · ${p.fecha}</div>
+            <p>${p.contenido}</p>
+            ${p.youtube ? `<iframe src="https://www.youtube.com/embed/${extraerID(p.youtube)}"></iframe>` : ''}
+            ${p.archivo ? `<p>📎 Archivo adjunto: ${p.archivo}</p>` : ''}
+            <div class="foro-actions">
+              <button onclick="Foro.eliminar(${p.id})">🗑 Eliminar</button>
+            </div>
+          </article>`;
+      });
+  }
+
+  function filtrar(cat) {
+    filtroActual = cat;
+    render();
+  }
+
+  function eliminar(id) {
+    if (!confirm('¿Eliminar publicación?')) return;
+    posts = posts.filter(p => p.id !== id);
+    guardar();
+    render();
+  }
+
+  function guardar() {
+    localStorage.setItem(STORAGE, JSON.stringify(posts));
+  }
+
+  function limpiar() {
+    tituloInput().value = '';
+    contenidoInput().value = '';
+    youtubeInput().value = '';
+    archivoInput().value = '';
+  }
+
+  function extraerID(url) {
+    if (url.includes('youtu.be')) return url.split('/').pop();
+    if (url.includes('v=')) return url.split('v=')[1].split('&')[0];
+    return '';
+  }
+
+  /* helpers */
+  const tituloInput = () => document.getElementById('titulo');
+  const contenidoInput = () => document.getElementById('contenido');
+  const categoriaInput = () => document.getElementById('categoria');
+  const youtubeInput = () => document.getElementById('youtube');
+  const archivoInput = () => document.getElementById('archivo');
+
+  return { crearPost, filtrar, eliminar };
+})();
+
+Foro.render?.();
+</script>
+
+</body>
+</html>

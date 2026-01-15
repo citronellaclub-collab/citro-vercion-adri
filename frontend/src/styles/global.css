@@ -1,0 +1,36 @@
+:root {
+    --bg-dark: #0d1117;
+    --bg-panel: #161b22;
+    --text-primary: #f0f6fc;
+    --text-secondary: #8b949e;
+    --accent: #238636;
+    --accent-light: #2ea043;
+    --border: #30363d;
+    --danger: #da3633;
+    --font-stack: 'Inter', system-ui, sans-serif;
+    --sidebar-width: 260px;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-stack);
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    /* Scroll handled by React Layout */
+}
+
+/* Utils */
+.btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background: var(--accent-light);
+}

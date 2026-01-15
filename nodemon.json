@@ -1,0 +1,13 @@
+{
+    "ignore": [
+        "frontend/",
+        "client/",
+        "doccs/"
+    ],
+    "watch": [
+        "server/",
+        "prisma/",
+        ".env"
+    ],
+    "ext": "js,json"
+}

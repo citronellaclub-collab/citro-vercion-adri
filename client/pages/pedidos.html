@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pedidos | Cultivo Virtual</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+header {
+  padding: 16px 24px;
+  background: #020617;
+  border-bottom: 1px solid #1e293b;
+}
+
+h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.container {
+  padding: 24px;
+  max-width: 900px;
+  margin: auto;
+}
+
+.pedido {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.pedido-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.estado {
+  font-weight: bold;
+}
+
+.estado.pendiente { color: #facc15; }
+.estado.aprobado { color: #22c55e; }
+.estado.rechazado { color: #ef4444; }
+
+.item {
+  font-size: 14px;
+  padding: 4px 0;
+  border-bottom: 1px solid #1e293b;
+}
+
+.total {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #4ade80;
+}
+
+.empty {
+  text-align: center;
+  color: #94a3b8;
+  margin-top: 50px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>📦 Pedidos</h1>
+</header>
+
+<div class="container" id="listaPedidos"></div>
+
+<script>
+/*
+  Estructura esperada en localStorage:
+  pedidos = [
+    {
+      id,
+      fecha,
+      items: [{nombre, cantidad, precio}],
+      total,
+      estado: "pendiente" | "aprobado" | "rechazado"
+    }
+  ]
+*/
+
+const lista = document.getElementById("listaPedidos");
+const pedidos = JSON.parse(localStorage.getItem("pedidos") || "[]");
+
+if (!pedidos.length) {
+  lista.innerHTML = `<div class="empty">No hay pedidos registrados</div>`;
+} else {
+  pedidos
+    .sort((a,b)=>b.id-a.id)
+    .forEach(p => {
+      const div = document.createElement("div");
+      div.className = "pedido";
+
+      div.innerHTML = `
+        <div class="pedido-header">
+          <div>Pedido #${p.id}</div>
+          <div class="estado ${p.estado}">${p.estado.toUpperCase()}</div>
+        </div>
+        <div class="small">📅 ${p.fecha}</div>
+        <div>
+          ${p.items.map(i =>
+            `<div class="item">• ${i.nombre} x${i.cantidad} — ${i.precio * i.cantidad} 🟢</div>`
+          ).join("")}
+        </div>
+        <div class="total">Total: ${p.total} 🟢</div>
+      `;
+
+      lista.appendChild(div);
+    });
+}
+</script>
+
+</body>
+</html>

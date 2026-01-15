@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard | Cultivo Virtual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- CSS general -->
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #0f1115;
+      color: #e5e7eb;
+      display: flex;
+    }
+
+    main {
+      padding: 24px;
+      flex: 1;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 14px;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <div id="sidebar-container"></div>
+
+  <!-- CONTENIDO -->
+  <main>
+    <h1>📊 Dashboard</h1>
+    <p>Resumen general del estado del club.</p>
+
+    <section class="cards">
+      <div class="card">
+        <h3>🪴 Cultivos activos</h3>
+        <p id="cultivosActivos">Cargando…</p>
+      </div>
+
+      <div class="card">
+        <h3>📦 Pedidos pendientes</h3>
+        <p id="pedidosPendientes">Cargando…</p>
+      </div>
+
+      <div class="card">
+        <h3>🌍 Publicaciones GTL</h3>
+        <p id="publicacionesGTL">Cargando…</p>
+      </div>
+
+      <div class="card">
+        <h3>💬 Actividad en foro</h3>
+        <p id="actividadForo">Cargando…</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- APP JS -->
+  <script src="app.js"></script>
+
+  <!-- CARGA SIDEBAR -->
+  <script>
+    fetch("sidebar.html")
+      .then(res => {
+        if (!res.ok) throw new Error("Sidebar no encontrada");
+        return res.text();
+      })
+      .then(html => {
+        document.getElementById("sidebar-container").innerHTML = html;
+      })
+      .catch(err => {
+        document.getElementById("sidebar-container").innerHTML =
+          "<p style='padding:16px;color:red'>Error cargando sidebar</p>";
+        console.error(err);
+      });
+  </script>
+
+  <!-- DATOS SIMULADOS -->
+  <script>
+    document.getElementById("cultivosActivos").textContent = "9 baldes activos";
+    document.getElementById("pedidosPendientes").textContent = "2 pedidos";
+    document.getElementById("publicacionesGTL").textContent = "5 items publicados";
+    document.getElementById("actividadForo").textContent = "3 temas recientes";
+  </script>
+
+</body>
+</html>

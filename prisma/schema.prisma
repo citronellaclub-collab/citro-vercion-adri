@@ -1,0 +1,85 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int      @id @default(autoincrement())
+  username String   @unique
+  password String
+  tokens   Int      @default(100)
+  crops    Crop[]
+  orders   Order[]
+  posts    Post[]
+  comments Comment[]
+}
+
+model Crop {
+  id         Int       @id @default(autoincrement())
+  bucketName String
+  status     String    @default("Verde") // Verde, Amarillo, Rojo
+  userId     Int
+  user       User      @relation(fields: [userId], references: [id])
+  logs       CropLog[]
+  createdAt  DateTime  @default(now())
+}
+
+model CropLog {
+  id        Int      @id @default(autoincrement())
+  week      String
+  ph        Float
+  ec        Float
+  grow      Float    @default(0)
+  micro     Float    @default(0)
+  bloom     Float    @default(0)
+  imageUrl  String?
+  cropId    Int
+  crop      Crop     @relation(fields: [cropId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model MarketItem {
+  id       Int     @id @default(autoincrement())
+  name     String
+  type     String  // Semilla, Nutriente, Equipo
+  price    Float
+  image    String  // Emoji or URL
+  stock    Int     @default(100)
+  orders   Order[]
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  itemId    Int
+  item      MarketItem @relation(fields: [itemId], references: [id])
+  price     Float
+  createdAt DateTime @default(now())
+}
+
+model Post {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  comments  Comment[]
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id])
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+}

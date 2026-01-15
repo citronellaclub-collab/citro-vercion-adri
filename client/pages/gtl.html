@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Global Trade Link</title>
+
+<link rel="stylesheet" href="../css/styles.css">
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #1e1e1e;
+  color: #f2f2f2;
+}
+
+header {
+  background: #2c2c2c;
+  padding: 10px 16px;
+  border-bottom: 2px solid #333;
+  display: flex;
+  justify-content: space-between;
+}
+
+.token { color:#3dff7a;font-weight:bold; }
+
+.tabs { display:flex;background:#252525; }
+.tab {
+  padding:8px 14px;
+  cursor:pointer;
+  border-right:1px solid #333;
+}
+.tab.active {
+  background:#1e1e1e;
+  border-bottom:2px solid #3d7eff;
+}
+
+.view { display:none;padding:12px; }
+.view.active { display:block; }
+
+input,button {
+  width:100%;
+  margin-bottom:6px;
+  padding:6px;
+  background:#1a1a1a;
+  border:1px solid #444;
+  color:#fff;
+}
+button { background:#3d7eff;cursor:pointer; }
+
+.grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:12px;
+}
+
+.item {
+  position:relative;
+  height:180px;
+  border:2px solid #3a3a3a;
+  cursor:pointer;
+  overflow:hidden;
+}
+.item img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.item-info {
+  position:absolute;
+  bottom:0;
+  width:100%;
+  background:rgba(0,0,0,.7);
+  padding:6px;
+  font-size:12px;
+}
+
+.modal,.dev-panel {
+  position:fixed;
+  background:#252525;
+  border:2px solid #444;
+  padding:12px;
+}
+.modal {
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:260px;
+  display:none;
+}
+.dev-panel {
+  right:10px;
+  bottom:10px;
+  width:240px;
+  display:none;
+}
+
+.cart-item {
+  border-bottom:1px solid #333;
+  padding:6px 0;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <strong>Global Trade Link</strong>
+  <div>Tokens: <span id="tokenCount" class="token"></span></div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="GTL.switchView('buscar',this)">Buscar</div>
+  <div class="tab" onclick="GTL.switchView('pedido',this)">Pedido</div>
+  <div class="tab" onclick="GTL.switchView('publicar',this)">Publicar</div>
+  <div class="tab" onclick="GTL.toggleDev()">Modo Dev</div>
+</div>
+
+<div id="buscar" class="view active">
+  <div class="grid" id="grid"></div>
+</div>
+
+<div id="pedido" class="view">
+  <h3>Pedido actual</h3>
+  <div id="cartList"></div>
+  <p>Total: <span id="cartTotal" class="token"></span></p>
+  <button onclick="GTL.confirmOrder()">Confirmar Pedido</button>
+  <button onclick="GTL.clearCart()">Vaciar Pedido</button>
+</div>
+
+<div id="publicar" class="view">
+  <h3>Publicar Item</h3>
+  <input id="pName" placeholder="Nombre">
+  <input id="pPrice" type="number" placeholder="Precio">
+  <input id="pQty" type="number" placeholder="Cantidad">
+  <input id="pImg" type="file" accept="image/*">
+  <button onclick="GTL.publishItem()">Publicar</button>
+</div>
+
+<div class="dev-panel" id="devPanel">
+  <h4>Editar Item</h4>
+  <img id="devImg" style="width:100%;height:100px;object-fit:cover">
+  <input id="editName">
+  <input id="editPrice" type="number">
+  <input id="editQty" type="number">
+  <input id="editImg" type="file" accept="image/*">
+  <button onclick="GTL.saveEdit()">Guardar Item</button>
+
+  <hr>
+  <h4>Tokens (Admin)</h4>
+  <input id="tokenAmount" type="number">
+  <button onclick="GTL.modifyTokens()">Aplicar</button>
+</div>
+
+<div class="modal" id="buyModal">
+  <h3 id="buyName"></h3>
+  <input id="buyQty" type="number" min="1">
+  <button onclick="GTL.addToCart()">Agregar al Pedido</button>
+  <button onclick="GTL.closeModal()">Cancelar</button>
+</div>
+
+<script src="../js/state.js"></script>
+
+<script>
+const GTL = (() => {
+
+  const STORE = {
+    items: 'gtl_items',
+    cart: 'gtl_cart'
+  };
+
+  let items = JSON.parse(localStorage.getItem(STORE.items)) || [];
+  let cart = JSON.parse(localStorage.getItem(STORE.cart)) || [];
+  let selectedIndex = null;
+  let buyIndex = null;
+
+  const getTokens = () => State.getTokens();
+  const setTokens = v => State.setTokens(v);
+
+  const save = () => {
+    localStorage.setItem(STORE.items, JSON.stringify(items));
+    localStorage.setItem(STORE.cart, JSON.stringify(cart));
+  };
+
+  const fileToBase64 = (f,cb)=>{
+    const r=new FileReader();
+    r.onload=()=>cb(r.result);
+    r.readAsDataURL(f);
+  };
+
+  function render() {
+    tokenCount.textContent = getTokens()+" 🟢";
+    grid.innerHTML="";
+    items.forEach((it,i)=>{
+      const d=document.createElement("div");
+      d.className="item";
+      d.innerHTML=`
+        <img src="${it.img}">
+        <div class="item-info">
+          <strong>${it.name}</strong><br>
+          ${it.price} 🟢 | Stock:${it.qty}
+        </div>`;
+      d.onclick=()=>openBuy(i);
+      d.oncontextmenu=e=>{
+        e.preventDefault();
+        selectItem(i);
+        toggleDev(true);
+      };
+      grid.appendChild(d);
+    });
+    renderCart();
+  }
+
+  function renderCart(){
+    cartList.innerHTML="";
+    let total=0;
+    cart.forEach(c=>{
+      const it=items[c.index];
+      const cost=c.qty*it.price;
+      total+=cost;
+      cartList.innerHTML+=`
+        <div class="cart-item">
+          ${it.name} x${c.qty} = <span class="token">${cost} 🟢</span>
+        </div>`;
+    });
+    cartTotal.textContent = total+" 🟢";
+    save();
+  }
+
+  function openBuy(i){
+    buyIndex=i;
+    buyName.textContent=items[i].name;
+    buyQty.value=1;
+    buyModal.style.display="block";
+  }
+
+  function addToCart(){
+    const qty=+buyQty.value;
+    const it=items[buyIndex];
+    if(qty>it.qty) return alert("Stock insuficiente");
+    const found=cart.find(c=>c.index===buyIndex);
+    found ? found.qty+=qty : cart.push({index:buyIndex,qty});
+    closeModal();
+    renderCart();
+  }
+
+  function confirmOrder(){
+    let total=0;
+    cart.forEach(c=> total+=c.qty*items[c.index].price);
+    if(total>getTokens()) return alert("Tokens insuficientes");
+    cart.forEach(c=> items[c.index].qty-=c.qty);
+    setTokens(getTokens()-total);
+    cart=[];
+    save();
+    render();
+  }
+
+  function publishItem(){
+    if(!pImg.files[0]) return alert("Imagen requerida");
+    fileToBase64(pImg.files[0],img=>{
+      items.push({
+        name:pName.value,
+        price:+pPrice.value,
+        qty:+pQty.value,
+        img
+      });
+      save();
+      render();
+    });
+  }
+
+  function selectItem(i){
+    selectedIndex=i;
+    const it=items[i];
+    editName.value=it.name;
+    editPrice.value=it.price;
+    editQty.value=it.qty;
+    devImg.src=it.img;
+  }
+
+  function saveEdit(){
+    const it=items[selectedIndex];
+    it.name=editName.value;
+    it.price=+editPrice.value;
+    it.qty=+editQty.value;
+    if(editImg.files[0]){
+      fileToBase64(editImg.files[0],img=>{
+        it.img=img;
+        save();
+        render();
+      });
+    } else {
+      save();
+      render();
+    }
+  }
+
+  function modifyTokens(){
+    setTokens(getTokens()+ +tokenAmount.value);
+    render();
+  }
+
+  function switchView(id,el){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    el.classList.add('active');
+  }
+
+  function toggleDev(force){
+    devPanel.style.display = force || devPanel.style.display==="none" ? "block" : "none";
+  }
+
+  function closeModal(){ buyModal.style.display="none"; }
+
+  if(items.length===0){
+    items.push({
+      name:"Item demo",
+      price:100,
+      qty:10,
+      img:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAFElEQVR42mNk+M9Qz0AEYBxVSF8AAF4fA8m4a9jLAAAAAElFTkSuQmCC"
+    });
+  }
+
+  render();
+
+  return {
+    switchView, publishItem, addToCart,
+    confirmOrder, clearCart:()=>{cart=[];renderCart();},
+    toggleDev, saveEdit, modifyTokens, closeModal
+  };
+
+})();
+</script>
+
+</body>
+</html>

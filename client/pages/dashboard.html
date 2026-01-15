@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard | Cultivo Virtual</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+header {
+  padding: 16px 24px;
+  background: #020617;
+  border-bottom: 1px solid #1e293b;
+}
+
+h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.dashboard {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.card h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #93c5fd;
+}
+
+.stat {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 10px 0;
+}
+
+.small {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.list {
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.list div {
+  padding: 6px 0;
+  border-bottom: 1px solid #1e293b;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>📊 Dashboard General</h1>
+</header>
+
+<section class="dashboard">
+
+  <!-- CULTIVO -->
+  <div class="card">
+    <h2>🌱 Mi Cultivo</h2>
+    <div class="stat" id="plantas">0</div>
+    <div class="small">Baldes activos</div>
+  </div>
+
+  <!-- ESTADO GENERAL -->
+  <div class="card">
+    <h2>⚠️ Estado del Cultivo</h2>
+    <div id="estadoCultivo" class="small">Sin datos</div>
+  </div>
+
+  <!-- FORO -->
+  <div class="card">
+    <h2>📘 Foro Académico</h2>
+    <div class="stat" id="posts">0</div>
+    <div class="small">Publicaciones totales</div>
+  </div>
+
+  <!-- GTL -->
+  <div class="card">
+    <h2>🌐 Global Trade Link</h2>
+    <div class="stat" id="tokens">0 🟢</div>
+    <div class="small">Tokens disponibles</div>
+  </div>
+
+  <!-- ACTIVIDAD -->
+  <div class="card">
+    <h2>🕒 Actividad Reciente</h2>
+    <div class="list" id="actividad"></div>
+  </div>
+
+</section>
+
+<script>
+/* ===== CULTIVO ===== */
+let baldes = 0;
+let alertas = 0;
+
+for (let i = 1; i <= 9; i++) {
+  if (localStorage.getItem(`balde${i}_genetica`)) {
+    baldes++;
+    const estado = localStorage.getItem(`balde${i}_estado`);
+    if (estado === "mal") alertas++;
+  }
+}
+
+document.getElementById("plantas").textContent = baldes;
+document.getElementById("estadoCultivo").innerHTML =
+  alertas
+    ? `🔴 ${alertas} baldes en estado crítico`
+    : "🟢 Cultivo estable";
+
+/* ===== FORO ===== */
+const posts = JSON.parse(localStorage.getItem("foro_posts") || "[]");
+document.getElementById("posts").textContent = posts.length;
+
+/* ===== GTL ===== */
+const tokens = localStorage.getItem("gtl_tokens") || 5000;
+document.getElementById("tokens").textContent = tokens + " 🟢";
+
+/* ===== ACTIVIDAD ===== */
+const actividad = document.getElementById("actividad");
+
+if (posts[0]) {
+  actividad.innerHTML += `<div>📘 Nuevo post: ${posts[0].titulo}</div>`;
+}
+
+if (baldes) {
+  actividad.innerHTML += `<div>🌱 ${baldes} baldes activos</div>`;
+}
+
+if (!actividad.innerHTML) {
+  actividad.innerHTML = "<div>Sin actividad reciente</div>";
+}
+</script>
+
+</body>
+</html>
