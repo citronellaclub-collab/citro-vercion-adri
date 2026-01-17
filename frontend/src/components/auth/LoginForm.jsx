@@ -20,11 +20,10 @@ export default function LoginForm() {
             const success = await login(identifier, password);
             if (success) {
                 navigate('/');
-            } else {
-                setError('Credenciales incorrectas');
             }
         } catch (err) {
-            setError('Error de conexión. Intenta nuevamente.');
+            // Mostrar el mensaje de error específico del servidor
+            setError(err.message || 'Error de conexión. Intenta nuevamente.');
         } finally {
             setIsLoading(false);
         }

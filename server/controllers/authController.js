@@ -6,54 +6,78 @@ const { generateVerificationToken, sendVerificationEmail, sendWelcomeEmail } = r
 exports.register = async (req, res) => {
     const { username, password, email } = req.body;
 
-    // Validación: email es obligatorio
-    if (!email || !email.trim()) {
-        return res.status(400).json({ error: 'El email es obligatorio' });
+    // Validación básica
+    if (!username || !username.trim()) {
+        return res.status(400).json({ error: 'El nombre de usuario es obligatorio' });
+    }
+    if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
     try {
         const hash = await bcrypt.hash(password, 10);
-        const verificationToken = generateVerificationToken();
+
+        // Preparar datos de creación
+        const userData = {
+            username: username.trim(),
+            password: hash,
+            tokens: 100
+        };
+
+        // Solo agregar email si está presente y no vacío
+        let shouldSendVerification = false;
+        if (email && email.trim()) {
+            userData.email = email.trim();
+            userData.verificationToken = generateVerificationToken();
+            userData.lastVerificationSent = new Date();
+            shouldSendVerification = true;
+        }
 
         const user = await prisma.user.create({
-            data: {
-                username,
-                password: hash,
-                email: email.trim(),  // ✅ Email obligatorio y limpio
-                tokens: 100,
-                verificationToken,
-                lastVerificationSent: new Date()
-            }
+            data: userData
         });
 
-        // ✅ Enviar email de verificación (siempre, ya que email es obligatorio)
-        sendVerificationEmail(email.trim(), username, verificationToken).catch(err => {
-            console.error('[EMAIL] Error enviando verificación:', err.message);
-        });
+        // Enviar email de verificación solo si se proporcionó email
+        if (shouldSendVerification) {
+            sendVerificationEmail(email.trim(), username, userData.verificationToken).catch(err => {
+                console.error('[EMAIL] Error enviando verificación:', err.message);
+            });
+        }
 
         const token = jwt.sign({ id: user.id, role: user.role, isDev: user.isDev }, process.env.JWT_SECRET || 'secret');
         res.json({
             token,
             id: user.id,
             username: user.username,
+            email: user.email || null,
             tokens: user.tokens,
             role: user.role,
             isDev: user.isDev,
             emailVerified: user.emailVerified,
-            needsVerification: !user.emailVerified
+            needsVerification: shouldSendVerification && !user.emailVerified
         });
 
     } catch (err) {
+        console.error('[REGISTER ERROR]', err);
+
+        // Manejar errores de Prisma específicamente
         if (err.code === 'P2002') {
-            // ✅ Manejar duplicados de username o email
-            if (err.meta?.target?.includes('username')) {
+            const target = err.meta?.target;
+            if (target?.includes('username')) {
                 return res.status(400).json({ error: 'El nombre de usuario ya existe' });
             }
-            if (err.meta?.target?.includes('email')) {
+            if (target?.includes('email') && email) {
                 return res.status(400).json({ error: 'El email ya está registrado' });
             }
+            // Si no podemos determinar el campo, dar un mensaje genérico
+            return res.status(400).json({ error: 'Ya existe un usuario con estos datos' });
         }
-        res.status(500).json({ error: 'Error al registrar usuario' });
+
+        // Para cualquier otro error, devolver 500 con más detalles para debugging
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 };
 
@@ -116,8 +140,21 @@ exports.login = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[AUTH ERROR]', err.message);
-        res.status(500).json({ error: 'Error en autenticación' });
+        console.error('[LOGIN ERROR]', err);
+
+        // Manejar errores específicos de Prisma
+        if (err.code === 'P1001') {
+            return res.status(500).json({ error: 'Error de conexión a la base de datos' });
+        }
+        if (err.code === 'P2002') {
+            return res.status(400).json({ error: 'Error de restricción de unicidad' });
+        }
+
+        // Para cualquier otro error, devolver 500 con detalles en desarrollo
+        res.status(500).json({
+            error: 'Error interno del servidor',
+            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 };
 

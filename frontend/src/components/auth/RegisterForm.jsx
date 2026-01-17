@@ -27,32 +27,27 @@ export default function RegisterForm() {
             return;
         }
 
-        if (!email.trim()) {
-            setError('El email es obligatorio');
-            return;
-        }
-
-        if (!validateEmail(email.trim())) {
-            setError('Por favor ingresa un email válido');
-            return;
-        }
-
         if (password.length < 6) {
             setError('La contraseña debe tener al menos 6 caracteres');
+            return;
+        }
+
+        // Email es opcional pero si se proporciona debe ser válido
+        if (email.trim() && !validateEmail(email.trim())) {
+            setError('Por favor ingresa un email válido');
             return;
         }
 
         setIsLoading(true);
 
         try {
-            const success = await register(username.trim(), password, email.trim());
+            const success = await register(username.trim(), password, email.trim() || null);
             if (success) {
                 navigate('/');
-            } else {
-                setError('Error en el registro. El usuario o email ya existe.');
             }
         } catch (err) {
-            setError('Error de conexión. Intenta nuevamente.');
+            // Mostrar el mensaje de error específico del servidor
+            setError(err.message || 'Error de conexión. Intenta nuevamente.');
         } finally {
             setIsLoading(false);
         }
@@ -111,10 +106,9 @@ export default function RegisterForm() {
                     </label>
                     <input
                         type="email"
-                        placeholder="tu@email.com"
+                        placeholder="tu@email.com (opcional)"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        required
                         style={{
                             width: '100%',
                             padding: '12px 16px',

@@ -65,12 +65,14 @@ export function AuthProvider({ children }) {
                 body: JSON.stringify({ username, password })
             });
 
+            const data = await res.json();
+
             if (!res.ok) {
                 clearSession(); // Limpieza automática del error anterior
-                throw new Error('Credenciales inválidas');
+                // Usar el mensaje de error real del servidor
+                throw new Error(data.error || 'Error de autenticación');
             }
 
-            const data = await res.json();
             localStorage.setItem('token', data.token);
 
             setUser({
@@ -92,7 +94,7 @@ export function AuthProvider({ children }) {
         } catch (e) {
             console.error('[AUTH CONTEXT ERROR]', e.message);
             clearSession();
-            return false;
+            throw e; // Re-throw para que el componente pueda mostrar el error específico
         }
     };
 
@@ -103,9 +105,14 @@ export function AuthProvider({ children }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password, email })
             });
-            if (!res.ok) throw new Error('Falló el registro');
 
             const data = await res.json();
+
+            if (!res.ok) {
+                // Usar el mensaje de error real del servidor
+                throw new Error(data.error || 'Falló el registro');
+            }
+
             localStorage.setItem('token', data.token);
             setUser({
                 id: data.id,
@@ -118,8 +125,8 @@ export function AuthProvider({ children }) {
             });
             return true;
         } catch (e) {
-            console.error(e);
-            return false;
+            console.error('[REGISTER ERROR]', e.message);
+            throw e; // Re-throw para que el componente pueda mostrar el error específico
         }
     };
 
