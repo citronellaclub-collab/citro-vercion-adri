@@ -11,6 +11,7 @@
 | `id` | Int | ✅ | autoincrement | Identificador único del usuario |
 | `username` | String | ✅ | - | Nombre de usuario único |
 | `password` | String | ✅ | - | Contraseña hasheada (bcrypt) |
+| `email` | String | ❌ | null | Email del usuario (único, opcional inicialmente) |
 | `role` | String | ✅ | "USER" | Rol del usuario: USER, ADMIN |
 | `isDev` | Boolean | ✅ | false | Flag de desarrollador (bypass de seguridad) |
 | `tokens` | Int | ✅ | 100 | Saldo de tokens para economía interna |
@@ -22,6 +23,7 @@
 **Índices**:
 
 - `username` (UNIQUE)
+- `email` (UNIQUE)
 - `verificationToken` (UNIQUE)
 
 **Relaciones**:

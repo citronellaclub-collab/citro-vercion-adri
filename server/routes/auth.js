@@ -8,6 +8,7 @@ router.post('/register', authController.register);
 router.get('/me', auth, authController.getMe);
 
 // Email verification endpoints
+router.put('/update-email', auth, authController.updateEmail);
 router.post('/resend-verification', auth, authController.resendVerification);
 router.get('/verify/:token', authController.verifyEmail);
 

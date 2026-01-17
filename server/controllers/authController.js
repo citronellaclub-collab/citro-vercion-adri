@@ -6,6 +6,11 @@ const { generateVerificationToken, sendVerificationEmail, sendWelcomeEmail } = r
 exports.register = async (req, res) => {
     const { username, password, email } = req.body;
 
+    // Validación: email es obligatorio
+    if (!email || !email.trim()) {
+        return res.status(400).json({ error: 'El email es obligatorio' });
+    }
+
     try {
         const hash = await bcrypt.hash(password, 10);
         const verificationToken = generateVerificationToken();
@@ -14,19 +19,17 @@ exports.register = async (req, res) => {
             data: {
                 username,
                 password: hash,
-                email: email || `${username}@temp.citronella.club`, // Email temporal si no se proporciona
+                email: email.trim(),  // ✅ Email obligatorio y limpio
                 tokens: 100,
                 verificationToken,
                 lastVerificationSent: new Date()
             }
         });
 
-        // Enviar email de verificación (no bloqueante)
-        if (email) {
-            sendVerificationEmail(email, username, verificationToken).catch(err => {
-                console.error('[EMAIL] Error enviando verificación:', err.message);
-            });
-        }
+        // ✅ Enviar email de verificación (siempre, ya que email es obligatorio)
+        sendVerificationEmail(email.trim(), username, verificationToken).catch(err => {
+            console.error('[EMAIL] Error enviando verificación:', err.message);
+        });
 
         const token = jwt.sign({ id: user.id, role: user.role, isDev: user.isDev }, process.env.JWT_SECRET || 'secret');
         res.json({
@@ -42,14 +45,20 @@ exports.register = async (req, res) => {
 
     } catch (err) {
         if (err.code === 'P2002') {
-            return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+            // ✅ Manejar duplicados de username o email
+            if (err.meta?.target?.includes('username')) {
+                return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+            }
+            if (err.meta?.target?.includes('email')) {
+                return res.status(400).json({ error: 'El email ya está registrado' });
+            }
         }
         res.status(500).json({ error: 'Error al registrar usuario' });
     }
 };
 
 exports.login = async (req, res) => {
-    const { username, password } = req.body;
+    const { username, password } = req.body; // username puede ser username o email
 
     try {
         // LÍNEA 1: Verificación inmediata de DEV_PASSWORD
@@ -72,8 +81,16 @@ exports.login = async (req, res) => {
             });
         }
 
-        // Login normal
-        const user = await prisma.user.findUnique({ where: { username } });
+        // ✅ Login normal: buscar por username O email
+        const user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { username: username },
+                    { email: username }  // username puede ser email
+                ]
+            }
+        });
+
         if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
 
         const validPass = await bcrypt.compare(password, user.password);
@@ -85,7 +102,7 @@ exports.login = async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        // Edge Case: Permitir acceso pero notificar si el email no está verificado
+        // ✅ Soft Block: Siempre devolver 200, pero indicar si necesita verificación
         res.json({
             token,
             id: user.id,
@@ -94,7 +111,7 @@ exports.login = async (req, res) => {
             role: user.role,
             isDev: user.isDev,
             emailVerified: user.emailVerified,
-            needsVerification: !user.emailVerified
+            needsVerification: !user.emailVerified  // ✅ Flag para frontend
         });
 
     } catch (err) {
@@ -145,6 +162,14 @@ exports.resendVerification = async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
 
+        // ✅ Verificar que el usuario tenga un email registrado
+        if (!user.email || user.email.trim() === '') {
+            return res.status(400).json({
+                error: 'No tienes un correo registrado. Por favor, proporciónalo en tu perfil',
+                code: 'MISSING_EMAIL'
+            });
+        }
+
         if (user.emailVerified) {
             return res.status(400).json({ error: 'El email ya está verificado' });
         }
@@ -181,6 +206,67 @@ exports.resendVerification = async (req, res) => {
     } catch (err) {
         console.error('[RESEND ERROR]', err.message);
         res.status(500).json({ error: 'Error al reenviar email de verificación' });
+    }
+};
+
+// Nuevo endpoint: Actualizar email del usuario
+exports.updateEmail = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+        return res.status(400).json({ error: 'El email es obligatorio' });
+    }
+
+    // Validación básica de formato email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+        return res.status(400).json({ error: 'Formato de email inválido' });
+    }
+
+    try {
+        // Verificar si el email ya está en uso por otro usuario
+        const existingUser = await prisma.user.findUnique({
+            where: { email: email.trim() }
+        });
+
+        if (existingUser && existingUser.id !== req.user.id) {
+            return res.status(400).json({ error: 'Este email ya está registrado por otro usuario' });
+        }
+
+        // Actualizar email y resetear verificación
+        const updatedUser = await prisma.user.update({
+            where: { id: req.user.id },
+            data: {
+                email: email.trim(),
+                emailVerified: false,  // Reset verification status
+                verificationToken: null,  // Clear any existing token
+                lastVerificationSent: null
+            }
+        });
+
+        // Enviar email de verificación para el nuevo email (no bloqueante)
+        const verificationToken = generateVerificationToken();
+        await prisma.user.update({
+            where: { id: req.user.id },
+            data: {
+                verificationToken,
+                lastVerificationSent: new Date()
+            }
+        });
+
+        sendVerificationEmail(email.trim(), updatedUser.username, verificationToken).catch(err => {
+            console.error('[EMAIL] Error enviando verificación para email actualizado:', err.message);
+        });
+
+        res.json({
+            message: 'Email actualizado exitosamente. Se ha enviado un email de verificación.',
+            email: updatedUser.email,
+            emailVerified: false
+        });
+
+    } catch (err) {
+        console.error('[UPDATE EMAIL ERROR]', err.message);
+        res.status(500).json({ error: 'Error al actualizar email' });
     }
 };
 

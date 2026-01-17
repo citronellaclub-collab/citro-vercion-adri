@@ -9,8 +9,21 @@ const SENDER_NAME = 'Citronella Club';
 
 /**
  * Envía un email usando la API de Brevo
+ * Manejo robusto de errores para evitar 500s en el servidor
  */
 async function sendEmail({ to, subject, htmlContent }) {
+    // Validación de parámetros
+    if (!to || !subject || !htmlContent) {
+        console.error('[EMAIL ERROR] Parámetros faltantes:', { to: !!to, subject: !!subject, htmlContent: !!htmlContent });
+        return { success: false, error: 'Parámetros de email incompletos' };
+    }
+
+    // Validación de configuración
+    if (!BREVO_API_KEY) {
+        console.error('[EMAIL ERROR] BREVO_API_KEY no configurada');
+        return { success: false, error: 'Configuración de email incompleta' };
+    }
+
     try {
         const response = await axios.post(
             BREVO_API_URL,
@@ -28,15 +41,60 @@ async function sendEmail({ to, subject, htmlContent }) {
                     'accept': 'application/json',
                     'api-key': BREVO_API_KEY,
                     'content-type': 'application/json'
-                }
+                },
+                timeout: 10000 // 10 segundos timeout
             }
         );
 
-        console.log(`[EMAIL] Enviado a ${to}: ${subject}`);
+        console.log(`[EMAIL] ✅ Enviado exitosamente a ${to}: ${subject}`);
         return { success: true, messageId: response.data.messageId };
+
     } catch (error) {
-        console.error('[EMAIL ERROR]', error.response?.data || error.message);
-        throw new Error('Error al enviar email');
+        // Manejo detallado de errores de Brevo
+        let errorMessage = 'Error desconocido al enviar email';
+
+        if (error.response) {
+            // Error de respuesta de Brevo API
+            const status = error.response.status;
+            const data = error.response.data;
+
+            switch (status) {
+                case 400:
+                    errorMessage = 'Datos de email inválidos';
+                    break;
+                case 401:
+                    errorMessage = 'Credenciales de Brevo inválidas';
+                    break;
+                case 429:
+                    errorMessage = 'Límite de envío de emails excedido';
+                    break;
+                case 500:
+                    errorMessage = 'Error interno del servicio de email';
+                    break;
+                default:
+                    errorMessage = `Error de Brevo API (${status})`;
+            }
+
+            console.error(`[EMAIL ERROR] Brevo API ${status}:`, data);
+
+        } else if (error.code === 'ECONNABORTED') {
+            // Timeout
+            errorMessage = 'Timeout al enviar email';
+            console.error('[EMAIL ERROR] Timeout al conectar con Brevo');
+
+        } else if (error.code === 'ENOTFOUND') {
+            // DNS/Network error
+            errorMessage = 'Error de conexión de red';
+            console.error('[EMAIL ERROR] Error de red:', error.message);
+
+        } else {
+            // Otro tipo de error
+            errorMessage = 'Error interno al procesar email';
+            console.error('[EMAIL ERROR] Error desconocido:', error.message);
+        }
+
+        // NO lanzamos error - retornamos objeto de error para manejo graceful
+        return { success: false, error: errorMessage };
     }
 }
 
@@ -49,9 +107,17 @@ function generateVerificationToken() {
 
 /**
  * Envía email de verificación de cuenta
+ * Retorna resultado del envío sin lanzar errores
  */
 async function sendVerificationEmail(email, username, token) {
-    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${token}`;
+    // ✅ Validación de FRONTEND_URL
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+        console.error('[EMAIL ERROR] FRONTEND_URL no configurada');
+        return { success: false, error: 'Configuración de URL incompleta' };
+    }
+
+    const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
 
     const htmlContent = `
         <!DOCTYPE html>
@@ -92,15 +158,25 @@ async function sendVerificationEmail(email, username, token) {
         </html>
     `;
 
-    return await sendEmail({
+    const result = await sendEmail({
         to: email,
         subject: 'Verifica tu cuenta - Citronella Club',
         htmlContent
     });
+
+    // ✅ Logging detallado del resultado
+    if (result.success) {
+        console.log(`[EMAIL] ✅ Verificación enviada a ${email} para usuario ${username}`);
+    } else {
+        console.error(`[EMAIL] ❌ Error enviando verificación a ${email}: ${result.error}`);
+    }
+
+    return result;
 }
 
 /**
  * Envía email de bienvenida tras verificación exitosa
+ * Retorna resultado del envío sin lanzar errores
  */
 async function sendWelcomeEmail(email, username) {
     const htmlContent = `
@@ -140,11 +216,20 @@ async function sendWelcomeEmail(email, username) {
         </html>
     `;
 
-    return await sendEmail({
+    const result = await sendEmail({
         to: email,
         subject: '¡Bienvenido a Citronella Club! 🌿',
         htmlContent
     });
+
+    // ✅ Logging detallado del resultado
+    if (result.success) {
+        console.log(`[EMAIL] ✅ Bienvenida enviada a ${email} para usuario ${username}`);
+    } else {
+        console.error(`[EMAIL] ❌ Error enviando bienvenida a ${email}: ${result.error}`);
+    }
+
+    return result;
 }
 
 module.exports = {

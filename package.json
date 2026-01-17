@@ -13,6 +13,7 @@
         "db:health": "node scripts/db-healthcheck.js",
         "db:sync": "ACCEPT_DATA_LOSS=true node scripts/db-healthcheck.js",
         "db:maintenance": "node scripts/maintenance.js",
+        "db:fix-emails": "node scripts/fix-missing-emails.js",
         "build": "node scripts/maintenance.js && cd frontend && npm install && npm run build",
         "postinstall": "npx prisma generate"
     },

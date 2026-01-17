@@ -5,18 +5,45 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const { login, register } = useAuth();
     const navigate = useNavigate();
 
+    const validateEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!isLogin) {
+            // Validaciones para registro
+            if (!username.trim()) {
+                alert('El nombre de usuario es obligatorio');
+                return;
+            }
+            if (!email.trim()) {
+                alert('El email es obligatorio');
+                return;
+            }
+            if (!validateEmail(email)) {
+                alert('Por favor ingresa un email válido');
+                return;
+            }
+            if (password.length < 6) {
+                alert('La contraseña debe tener al menos 6 caracteres');
+                return;
+            }
+        }
+
         const success = isLogin
             ? await login(username, password)
-            : await register(username, password);
+            : await register(username, password, email);
 
         if (success) navigate('/');
-        else alert('Error de credenciales');
+        else alert(isLogin ? 'Error de credenciales' : 'Error en el registro');
     }
 
     return (
@@ -28,23 +55,47 @@ export default function Login() {
 
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '14px' }}>Usuario</label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '14px' }}>
+                            {isLogin ? 'Email o Usuario' : 'Usuario'}
+                        </label>
                         <input
+                            type={isLogin ? 'text' : 'text'}
+                            placeholder={isLogin ? 'tu@email.com o tu_usuario' : 'tu_usuario'}
                             style={{ width: '100%', padding: '8px', background: '#0d1117', border: '1px solid #30363d', color: 'white', borderRadius: '4px' }}
                             value={username}
                             onChange={e => setUsername(e.target.value)}
+                            required
                         />
                     </div>
+
+                    {!isLogin && (
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '14px' }}>Email</label>
+                            <input
+                                type="email"
+                                placeholder="tu@email.com"
+                                style={{ width: '100%', padding: '8px', background: '#0d1117', border: '1px solid #30363d', color: 'white', borderRadius: '4px' }}
+                                value={email}
+                                onChange={e => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                    )}
+
                     <div style={{ marginBottom: '1rem' }}>
                         <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '14px' }}>Contraseña</label>
                         <input
                             type="password"
+                            placeholder={isLogin ? 'Tu contraseña' : 'Mínimo 6 caracteres'}
                             style={{ width: '100%', padding: '8px', background: '#0d1117', border: '1px solid #30363d', color: 'white', borderRadius: '4px' }}
                             value={password}
                             onChange={e => setPassword(e.target.value)}
+                            required
+                            minLength={isLogin ? undefined : 6}
                         />
                     </div>
-                    <button className="btn-primary">
+
+                    <button className="btn-primary" style={{ width: '100%', padding: '12px', marginTop: '1rem' }}>
                         {isLogin ? 'Ingresar' : 'Crear Cuenta'}
                     </button>
                 </form>

@@ -7,8 +7,59 @@
 
 const { PrismaClient } = require('@prisma/client');
 const { execSync } = require('child_process');
+const { fixMissingEmails, validateEmailUniqueness } = require('./fix-missing-emails');
 
 const prisma = new PrismaClient();
+
+async function fixVerifiedUsersWithoutEmail() {
+    console.log('🔍 Buscando usuarios verificados sin email físico...');
+
+    try {
+        // Find users with emailVerified: true but no email
+        const verifiedUsersWithoutEmail = await prisma.user.findMany({
+            where: {
+                emailVerified: true,
+                OR: [
+                    { email: null },
+                    { email: '' }
+                ]
+            },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                emailVerified: true
+            }
+        });
+
+        if (verifiedUsersWithoutEmail.length === 0) {
+            console.log('✅ No se encontraron usuarios verificados sin email');
+            return true;
+        }
+
+        console.log(`⚠️  Encontrados ${verifiedUsersWithoutEmail.length} usuarios con emailVerified: true pero sin email`);
+
+        // Reset their verification status (this is a data integrity issue)
+        for (const user of verifiedUsersWithoutEmail) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    emailVerified: false,
+                    verificationToken: null,
+                    lastVerificationSent: null
+                }
+            });
+            console.log(`🔄 Usuario ${user.username}: emailVerified reseteado a false`);
+        }
+
+        console.log(`✅ Corregidos ${verifiedUsersWithoutEmail.length} usuarios con problemas de integridad`);
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error en verificación de integridad:', error.message);
+        throw error;
+    }
+}
 
 async function checkDatabaseConnection() {
     console.log('🔍 Verificando conexión a la base de datos...');
@@ -104,7 +155,16 @@ async function main() {
             applyMigrations();
         }
 
-        // 4. Generar cliente de Prisma
+        // 4. Verificar integridad de emails verificados
+        console.log('🔍 Verificando integridad de emails verificados...');
+        await fixVerifiedUsersWithoutEmail();
+
+        // 5. Migrar emails faltantes (siempre se ejecuta)
+        console.log('📧 Verificando emails de usuarios...');
+        await fixMissingEmails();
+        await validateEmailUniqueness();
+
+        // 5. Generar cliente de Prisma
         generatePrismaClient();
 
         console.log('\n🎉 Mantenimiento completado exitosamente!');
@@ -137,4 +197,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { main, checkDatabaseConnection, checkPendingMigrations };
+module.exports = { main, checkDatabaseConnection, checkPendingMigrations, fixVerifiedUsersWithoutEmail };

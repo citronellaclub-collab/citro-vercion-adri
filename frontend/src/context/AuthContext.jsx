@@ -94,12 +94,12 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const register = async (username, password) => {
+    const register = async (username, password, email) => {
         try {
             const res = await fetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password, email })
             });
             if (!res.ok) throw new Error('Falló el registro');
 

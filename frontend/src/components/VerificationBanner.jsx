@@ -32,7 +32,14 @@ export default function VerificationBanner() {
             if (res.ok) {
                 setMessage('✅ Email de verificación enviado. Revisa tu bandeja de entrada.');
             } else {
-                setMessage(`❌ ${data.error || 'Error al enviar email'}`);
+                // ✅ Manejo especial para email faltante
+                if (data.code === 'MISSING_EMAIL') {
+                    alert('Falta información: Ve a tu perfil para agregar un correo electrónico');
+                    // Podríamos redirigir automáticamente al perfil
+                    // navigate('/perfil');
+                } else {
+                    setMessage(`❌ ${data.error || 'Error al enviar email'}`);
+                }
             }
         } catch (error) {
             setMessage('❌ Error de conexión. Intenta nuevamente.');
