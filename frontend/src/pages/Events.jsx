@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, Info, Ticket, ChevronRight, QrCode, User, Plus, X, Upload } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Events() {
     const { user, updateUser } = useAuth();
+    const navigate = useNavigate();
+
+    // Control de socios: Redirigir si no tiene email
+    useEffect(() => {
+        if (user && (!user.email || user.email.trim() === '')) {
+            navigate('/perfil');
+        }
+    }, [user, navigate]);
     const [events, setEvents] = useState([]);
     const [myReservations, setMyReservations] = useState([]);
     const [loading, setLoading] = useState(true);

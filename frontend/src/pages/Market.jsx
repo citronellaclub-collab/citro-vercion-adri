@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, Tag, ShoppingBag, ShoppingBasket, PlusCircle, Star, ShieldCheck, Heart, Bell, Trash2, Edit3, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Search, Plus, Tag, ShoppingBag, ShoppingBasket, PlusCircle, Star, ShieldCheck, Heart, Bell, Trash2, Edit3, Image as ImageIcon, Loader2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import VerificationGuard from '../components/VerificationGuard';
 
 const CATEGORIES = ['Todos', 'Semillas', 'Sustratos', 'Nutrientes', 'Equipamiento', 'Otros'];
 
 export default function Market() {
     const { user, updateUser } = useAuth();
+    const navigate = useNavigate();
+
+    // Control de socios: Redirigir si no tiene email
+    useEffect(() => {
+        if (user && (!user.email || user.email.trim() === '')) {
+            navigate('/perfil');
+        }
+    }, [user, navigate]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [tab, setTab] = useState('explora');

@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Users, Coins, MessageSquare, ShieldCheck, FileText, AlertTriangle, ShieldAlert, Trash2, Pin, Lock, Edit3, Plus, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminPanel() {
-    const { isStaff } = useAuth();
+    const { user, isStaff } = useAuth();
+    const navigate = useNavigate();
+
+    // Control de socios: Redirigir si no tiene email
+    useEffect(() => {
+        if (user && (!user.email || user.email.trim() === '')) {
+            navigate('/perfil');
+        }
+    }, [user, navigate]);
     const [activeTab, setActiveTab] = useState('tokens');
     const [users, setUsers] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');

@@ -1,9 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { User as UserIcon, ShieldCheck, Lock, LogOut, FileText, ChevronRight, Edit3, Save, X, Mail } from 'lucide-react';
 
 export default function Profile() {
     const { user, isStaff, verifyStaff, updateUser } = useAuth();
+    const navigate = useNavigate();
+
+    // Control de socios: Redirigir si no tiene email
+    useEffect(() => {
+        if (user && (!user.email || user.email.trim() === '')) {
+            navigate('/perfil');
+        }
+    }, [user, navigate]);
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');

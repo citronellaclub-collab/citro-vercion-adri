@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Package, CheckCircle, Clock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Orders() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
     const [view, setView] = useState('purchases'); // 'purchases' or 'sales'
+
+    // Control de socios: Redirigir si no tiene email
+    useEffect(() => {
+        if (user && (!user.email || user.email.trim() === '')) {
+            navigate('/perfil');
+        }
+    }, [user, navigate]);
 
     // Review Modal State
     const [showReviewModal, setShowReviewModal] = useState(false);

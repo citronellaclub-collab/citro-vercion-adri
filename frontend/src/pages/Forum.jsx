@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageCircle, ThumbsUp, User, PenTool, FileText, Youtube, Download, Bell, Filter, BookOpen, Search, Send, X, Paperclip, MoreHorizontal, FlaskConical, Lightbulb, Star, Trash2, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import VerificationGuard from '../components/VerificationGuard';
 
 const CATEGORIES = ['Clases', 'Investigaciones', 'FAQ', 'Debates', 'Papers', 'Noticias', 'Anuncios'];
 
 export default function Forum() {
     const { user } = useAuth();
+    const navigate = useNavigate();
+
+    // Control de socios: Redirigir si no tiene email
+    useEffect(() => {
+        if (user && (!user.email || user.email.trim() === '')) {
+            navigate('/perfil');
+        }
+    }, [user, navigate]);
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
