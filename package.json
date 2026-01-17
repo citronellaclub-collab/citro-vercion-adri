@@ -14,6 +14,7 @@
         "db:sync": "ACCEPT_DATA_LOSS=true node scripts/db-healthcheck.js",
         "db:maintenance": "node scripts/maintenance.js",
         "db:fix-emails": "node scripts/fix-missing-emails.js",
+        "db:reset": "node scripts/reset-db.js",
         "build": "npx prisma generate && npx prisma migrate deploy && cd frontend && npm ci && npm run build",
         "postinstall": "npx prisma generate"
     },
