@@ -24,9 +24,43 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
+app.get('/api/health', (req, res) => {
+    console.log('💚 HEALTH CHECK CALLED AT:', new Date().toISOString());
+    res.json({
+        status: 'ok',
+        timestamp: new Date(),
+        env: {
+            NODE_ENV: process.env.NODE_ENV,
+            DATABASE_URL: !!process.env.DATABASE_URL,
+            JWT_SECRET: !!process.env.JWT_SECRET
+        }
+    });
+});
+
+app.get('/api/test', (req, res) => {
+    console.log('🧪 TEST ENDPOINT CALLED - NO DB REQUIRED');
+    res.json({
+        message: 'API is working!',
+        timestamp: new Date(),
+        version: '1.0.1',
+        env: {
+            NODE_ENV: process.env.NODE_ENV,
+            hasDbUrl: !!process.env.DATABASE_URL,
+            hasJwtSecret: !!process.env.JWT_SECRET
+        }
+    });
+});
+
+app.get('/api/ping', (req, res) => {
+    console.log('🏓 PING ENDPOINT HIT');
+    res.json({ pong: true, time: Date.now() });
+});
+
+console.log('🛣️ MOUNTING ROUTES...');
 app.use('/api/auth', authRoutes);
+console.log('✅ AUTH ROUTES MOUNTED at /api/auth');
 app.use('/api', apiRoutes); // Mounts /crops, /market, etc.
+console.log('✅ API ROUTES MOUNTED at /api');
 
 // Static Frontend (Solo en Producción)
 if (process.env.NODE_ENV === 'production') {
