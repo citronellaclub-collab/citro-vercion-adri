@@ -10,7 +10,9 @@
         "dev": "npm run server",
         "db:push": "npx prisma db push",
         "db:studio": "npx prisma studio",
-        "build": "npx prisma generate && cd frontend && npm install && npm run build",
+        "db:health": "node scripts/db-healthcheck.js",
+        "db:sync": "ACCEPT_DATA_LOSS=true node scripts/db-healthcheck.js",
+        "build": "node scripts/db-healthcheck.js && cd frontend && npm install && npm run build",
         "postinstall": "npx prisma generate"
     },
     "keywords": [],
