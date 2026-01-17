@@ -1,64 +1,42 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../../config/db');
-const { generateVerificationToken, sendVerificationEmail, sendWelcomeEmail } = require('../services/mailService');
 
 exports.register = async (req, res) => {
     const { username, password, email } = req.body;
 
-    // Validación básica de entrada
-    if (!username || !username.trim()) {
-        return res.status(400).json({ error: 'El nombre de usuario es obligatorio' });
-    }
-    if (!password || password.length < 6) {
-        return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    // Validación mínima
+    if (!username?.trim() || !password || password.length < 6) {
+        return res.status(400).json({ error: 'Username y password (6+ chars) requeridos' });
     }
 
     try {
-        // Hash de contraseña
         const hash = await bcrypt.hash(password, 10);
 
-        // Preparar datos de creación con valores seguros
+        // Datos mínimos requeridos por schema
         const userData = {
             username: username.trim(),
             password: hash,
             tokens: 100,
-            role: 'USER',  // Explicitly set role
-            isDev: false,  // Explicitly set isDev
+            role: 'USER',
+            isDev: false,
             emailVerified: false,
             isVerified: false
         };
 
-        // Solo agregar email si está presente y no vacío
-        let shouldSendVerification = false;
-        if (email && typeof email === 'string' && email.trim()) {
-            const cleanEmail = email.trim().toLowerCase(); // Safe toLowerCase
-            userData.email = cleanEmail;
-            userData.verificationToken = generateVerificationToken();
-            userData.lastVerificationSent = new Date();
-            shouldSendVerification = true;
+        // Email opcional
+        if (email?.trim()) {
+            userData.email = email.trim();
         }
 
-        // Crear usuario en base de datos
-        const user = await prisma.user.create({
-            data: userData
-        });
+        const user = await prisma.user.create({ data: userData });
 
-        // Enviar email de verificación solo si se proporcionó email válido
-        if (shouldSendVerification && user.email) {
-            sendVerificationEmail(user.email, user.username, userData.verificationToken).catch(err => {
-                console.error('[EMAIL] Error enviando verificación:', err.message);
-            });
-        }
-
-        // Generar token JWT
         const token = jwt.sign(
             { id: user.id, role: user.role, isDev: user.isDev },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '24h' }
         );
 
-        // Respuesta exitosa
         res.json({
             token,
             id: user.id,
@@ -67,84 +45,33 @@ exports.register = async (req, res) => {
             tokens: user.tokens,
             role: user.role,
             isDev: user.isDev,
-            emailVerified: user.emailVerified,
-            needsVerification: shouldSendVerification && !user.emailVerified
+            emailVerified: user.emailVerified
         });
 
     } catch (err) {
-        console.error('DETALLE DEL ERROR 500 EN REGISTRO:', {
-            message: err.message,
-            code: err.code,
-            meta: err.meta,
-            stack: err.stack
-        });
-
-        // Manejar errores de Prisma específicamente
-        if (err.code === 'P2002') {
-            const target = err.meta?.target;
-            if (target?.includes('username')) {
-                return res.status(400).json({ error: 'El nombre de usuario ya existe' });
-            }
-            if (target?.includes('email')) {
-                return res.status(400).json({ error: 'El email ya está registrado' });
-            }
-            // Si no podemos determinar el campo, dar un mensaje genérico
-            return res.status(400).json({ error: 'Ya existe un usuario con estos datos' });
-        }
-
-        // Para cualquier otro error de base de datos
-        if (err.code?.startsWith('P')) {
-            return res.status(500).json({
-                error: 'Error de base de datos',
-                details: process.env.NODE_ENV === 'development' ? err.message : undefined
-            });
-        }
-
-        // Error genérico
+        // Devolver error real para debugging
         res.status(500).json({
-            error: 'Error interno del servidor',
-            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+            error: 'Registration failed',
+            prismaError: err.message,
+            code: err.code,
+            meta: err.meta
         });
     }
 };
 
 exports.login = async (req, res) => {
-    const { username, password } = req.body; // username puede ser username o email
+    const { username, password } = req.body;
 
-    // Validación básica de entrada
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Usuario y contraseña son obligatorios' });
+    if (!username?.trim() || !password) {
+        return res.status(400).json({ error: 'Username y password requeridos' });
     }
 
     try {
-        // LÍNEA 1: Verificación inmediata de DEV_PASSWORD (solo si está configurada)
-        if (process.env.STAFF_PASSWORD && password === process.env.STAFF_PASSWORD) {
-            console.log(`[DEV ACCESS] Bypass activado para: ${username}`);
-            const devToken = jwt.sign(
-                { id: 999999, username: username || 'Developer', role: 'ADMIN', isDev: true },
-                process.env.JWT_SECRET || 'secret',
-                { expiresIn: '24h' }
-            );
-            return res.json({
-                token: devToken,
-                id: 999999,
-                username: username || 'Developer',
-                email: null,
-                tokens: 999999,
-                role: 'ADMIN',
-                isDev: true,
-                emailVerified: true,
-                needsVerification: false
-            });
-        }
-
-        // ✅ Login normal: buscar por username O email (con protección contra null)
         const searchValue = username.trim();
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
                     { username: searchValue },
-                    // Solo buscar por email si el valor parece un email
                     ...(searchValue.includes('@') ? [{ email: searchValue }] : [])
                 ]
             }
@@ -154,20 +81,17 @@ exports.login = async (req, res) => {
             return res.status(400).json({ error: 'Usuario no encontrado' });
         }
 
-        // Verificar contraseña
         const validPass = await bcrypt.compare(password, user.password);
         if (!validPass) {
             return res.status(400).json({ error: 'Contraseña incorrecta' });
         }
 
-        // Generar token JWT
         const token = jwt.sign(
             { id: user.id, role: user.role, isDev: user.isDev },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '24h' }
         );
 
-        // ✅ Respuesta exitosa
         res.json({
             token,
             id: user.id,
@@ -176,30 +100,16 @@ exports.login = async (req, res) => {
             tokens: user.tokens,
             role: user.role,
             isDev: user.isDev,
-            emailVerified: user.emailVerified,
-            needsVerification: !user.emailVerified
+            emailVerified: user.emailVerified
         });
 
     } catch (err) {
-        console.error('DETALLE DEL ERROR 500 EN LOGIN:', {
-            message: err.message,
-            code: err.code,
-            meta: err.meta,
-            stack: err.stack
-        });
-
-        // Manejar errores específicos de Prisma
-        if (err.code === 'P1001') {
-            return res.status(500).json({ error: 'Error de conexión a la base de datos' });
-        }
-        if (err.code === 'P2002') {
-            return res.status(400).json({ error: 'Error de restricción de unicidad' });
-        }
-
-        // Para cualquier otro error, devolver 500 con detalles
+        // Devolver error real para debugging
         res.status(500).json({
-            error: 'Error interno del servidor',
-            details: process.env.NODE_ENV === 'development' ? err.message : undefined
+            error: 'Login failed',
+            prismaError: err.message,
+            code: err.code,
+            meta: err.meta
         });
     }
 };

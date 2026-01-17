@@ -13,14 +13,13 @@ model User {
   id       Int      @id @default(autoincrement())
   username String   @unique
   password String
-  email           String?   @unique
-  role           String    @default("USER") // USER, ADMIN
+  email           String?
+  role           String    @default("USER")
   isDev          Boolean   @default(false)
   tokens         Int       @default(100)
   isVerified     Boolean   @default(false)
-  // Email verification fields
   emailVerified         Boolean   @default(false)
-  verificationToken     String?   @unique
+  verificationToken     String?
   lastVerificationSent  DateTime?
   crops          Crop[]
   buyerOrders    Order[]   @relation("BuyerOrders")

@@ -1,6 +1,6 @@
 {
     "name": "cultivo-virtual-mvp",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Sistema de gestión de cultivos y marketplace (MVP Fullstack)",
     "main": "server/server.js",
     "scripts": {
@@ -15,6 +15,9 @@
         "db:maintenance": "node scripts/maintenance.js",
         "db:fix-emails": "node scripts/fix-missing-emails.js",
         "db:reset": "node scripts/reset-db.js",
+        "db:add-fields": "node scripts/add-missing-fields.js",
+        "db:health": "node scripts/comprehensive-healthcheck.js",
+        "db:test-user": "node scripts/create-test-user.js",
         "build": "npx prisma generate && npx prisma migrate deploy && cd frontend && npm ci && npm run build",
         "postinstall": "npx prisma generate"
     },

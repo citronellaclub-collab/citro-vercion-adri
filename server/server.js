@@ -47,6 +47,9 @@ module.exports = app;
 
 // Solo escuchar si se ejecuta directamente
 if (require.main === module) {
+    console.log('--- INICIANDO SERVIDOR VERSION 1.0.1 ---');
+    console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+    console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
     });
