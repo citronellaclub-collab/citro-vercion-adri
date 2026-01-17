@@ -3,39 +3,48 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../../config/db');
 
 exports.register = async (req, res) => {
+    console.log('📝 REGISTER REQUEST:', { username: req.body.username, hasPassword: !!req.body.password, email: req.body.email });
+
     const { username, password, email } = req.body;
 
-    // Validación mínima
     if (!username?.trim() || !password || password.length < 6) {
         return res.status(400).json({ error: 'Username y password (6+ chars) requeridos' });
     }
 
     try {
+        console.log('🔐 Hashing password...');
         const hash = await bcrypt.hash(password, 10);
 
-        // Datos mínimos requeridos por schema
+        // CONSTRUIR OBJETO CON VALORES EXPLÍCITOS - NADA UNDEFINED
         const userData = {
             username: username.trim(),
             password: hash,
-            tokens: 100,
-            role: 'USER',
-            isDev: false,
-            emailVerified: false,
-            isVerified: false
+            tokens: 100,           // explícito
+            role: 'USER',          // explícito
+            isDev: false,          // explícito
+            emailVerified: false,  // explícito
+            isVerified: false      // explícito
         };
 
-        // Email opcional
-        if (email?.trim()) {
+        // Email opcional pero explícito
+        if (email && typeof email === 'string' && email.trim()) {
             userData.email = email.trim();
         }
 
+        console.log('💾 UserData construido:', userData);
+
+        console.log('🗄️ Creando usuario en DB...');
         const user = await prisma.user.create({ data: userData });
+
+        console.log('✅ Usuario creado:', { id: user.id, username: user.username });
 
         const token = jwt.sign(
             { id: user.id, role: user.role, isDev: user.isDev },
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '24h' }
         );
+
+        console.log('🎫 Token generado');
 
         res.json({
             token,
@@ -49,17 +58,27 @@ exports.register = async (req, res) => {
         });
 
     } catch (err) {
-        // Devolver error real para debugging
-        res.status(500).json({
-            error: 'Registration failed',
-            prismaError: err.message,
+        console.error('❌ ERROR EN REGISTER:', {
+            message: err.message,
             code: err.code,
-            meta: err.meta
+            meta: err.meta,
+            stack: err.stack?.substring(0, 500)
+        });
+
+        // DEVOLVER ERROR CRUDO PARA DEBUGGING
+        res.status(500).json({
+            error: 'REGISTRATION_CRASH',
+            rawMessage: err.message,
+            prismaCode: err.code,
+            prismaMeta: err.meta,
+            stack: err.stack?.substring(0, 300)
         });
     }
 };
 
 exports.login = async (req, res) => {
+    console.log('🔑 LOGIN REQUEST:', { username: req.body.username, hasPassword: !!req.body.password });
+
     const { username, password } = req.body;
 
     if (!username?.trim() || !password) {
@@ -68,6 +87,8 @@ exports.login = async (req, res) => {
 
     try {
         const searchValue = username.trim();
+        console.log('🔍 Buscando usuario:', searchValue);
+
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
@@ -77,11 +98,16 @@ exports.login = async (req, res) => {
             }
         });
 
+        console.log('👤 Usuario encontrado:', user ? { id: user.id, username: user.username } : 'NO ENCONTRADO');
+
         if (!user) {
             return res.status(400).json({ error: 'Usuario no encontrado' });
         }
 
+        console.log('🔐 Verificando password...');
         const validPass = await bcrypt.compare(password, user.password);
+        console.log('✅ Password válido:', validPass);
+
         if (!validPass) {
             return res.status(400).json({ error: 'Contraseña incorrecta' });
         }
@@ -92,6 +118,8 @@ exports.login = async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        console.log('🎫 Login exitoso para:', user.username);
+
         res.json({
             token,
             id: user.id,
@@ -104,12 +132,20 @@ exports.login = async (req, res) => {
         });
 
     } catch (err) {
-        // Devolver error real para debugging
-        res.status(500).json({
-            error: 'Login failed',
-            prismaError: err.message,
+        console.error('❌ ERROR EN LOGIN:', {
+            message: err.message,
             code: err.code,
-            meta: err.meta
+            meta: err.meta,
+            stack: err.stack?.substring(0, 500)
+        });
+
+        // DEVOLVER ERROR CRUDO PARA DEBUGGING
+        res.status(500).json({
+            error: 'LOGIN_CRASH',
+            rawMessage: err.message,
+            prismaCode: err.code,
+            prismaMeta: err.meta,
+            stack: err.stack?.substring(0, 300)
         });
     }
 };
