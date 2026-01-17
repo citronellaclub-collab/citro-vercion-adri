@@ -35,6 +35,7 @@ export function AuthProvider({ children }) {
                         setUser({
                             id: data.id,
                             username: data.username,
+                            email: data.email,
                             tokens: data.tokens,
                             role: data.role,
                             isDev: data.isDev,
@@ -75,6 +76,7 @@ export function AuthProvider({ children }) {
             setUser({
                 id: data.id,
                 username: data.username,
+                email: data.email,
                 tokens: data.tokens,
                 role: data.role,
                 isDev: data.isDev,
@@ -108,6 +110,7 @@ export function AuthProvider({ children }) {
             setUser({
                 id: data.id,
                 username: data.username,
+                email: data.email,
                 tokens: data.tokens,
                 role: data.role,
                 isDev: data.isDev,
@@ -126,6 +129,27 @@ export function AuthProvider({ children }) {
 
     const updateUser = (data) => {
         setUser(prev => ({ ...prev, ...data }));
+    };
+
+    const updateEmail = async (email) => {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch('/api/auth/update-email', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ email })
+            });
+            if (!res.ok) throw new Error('Error al actualizar email');
+            const data = await res.json();
+            setUser(prev => ({ ...prev, email: data.email, emailVerified: data.emailVerified }));
+            return { success: true, message: data.message };
+        } catch (error) {
+            console.error(error);
+            return { success: false, error: error.message };
+        }
     };
 
     const verifyStaff = async (password) => {
@@ -159,6 +183,7 @@ export function AuthProvider({ children }) {
         register,
         logout,
         updateUser,
+        updateEmail,
         isStaff,
         verifyStaff,
         loading

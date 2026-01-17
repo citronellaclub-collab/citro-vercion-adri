@@ -107,6 +107,7 @@ exports.login = async (req, res) => {
             token,
             id: user.id,
             username: user.username,
+            email: user.email || null,
             tokens: user.tokens,
             role: user.role,
             isDev: user.isDev,
@@ -127,6 +128,7 @@ exports.getMe = async (req, res) => {
             return res.json({
                 id: req.user.id,
                 username: req.user.username || 'Developer',
+                email: null,
                 tokens: 999999,
                 role: 'ADMIN',
                 isDev: true,
@@ -141,6 +143,7 @@ exports.getMe = async (req, res) => {
         res.json({
             id: user.id,
             username: user.username,
+            email: user.email || null,
             tokens: user.tokens,
             role: user.role,
             isDev: user.isDev,

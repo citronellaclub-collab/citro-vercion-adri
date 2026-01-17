@@ -4,15 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { User as UserIcon, ShieldCheck, Lock, LogOut, FileText, ChevronRight, Edit3, Save, X, Mail } from 'lucide-react';
 
 export default function Profile() {
-    const { user, isStaff, verifyStaff, updateUser } = useAuth();
-    const navigate = useNavigate();
-
-    // Control de socios: Redirigir si no tiene email
-    useEffect(() => {
-        if (user && (!user.email || user.email.trim() === '')) {
-            navigate('/perfil');
-        }
-    }, [user, navigate]);
+    const { user, isStaff, verifyStaff, updateUser, updateEmail } = useAuth();
     const [showStaffModal, setShowStaffModal] = useState(false);
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -49,36 +41,16 @@ export default function Profile() {
         setIsUpdatingEmail(true);
         setEmailMessage('');
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('/api/auth/update-email', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ email: newEmail.trim() })
-            });
+        const result = await updateEmail(newEmail.trim());
 
-            const data = await response.json();
-
-            if (response.ok) {
-                // Update local user state
-                updateUser({
-                    email: newEmail.trim(),
-                    emailVerified: false
-                });
-
-                setIsEditingEmail(false);
-                setEmailMessage('✅ Email actualizado. Por favor, verifícalo nuevamente.');
-            } else {
-                setEmailMessage(`❌ ${data.error || 'Error al actualizar email'}`);
-            }
-        } catch (error) {
-            setEmailMessage('❌ Error de conexión. Intenta nuevamente.');
-        } finally {
-            setIsUpdatingEmail(false);
+        if (result.success) {
+            setIsEditingEmail(false);
+            setEmailMessage('✅ Email actualizado. Por favor, verifícalo nuevamente.');
+        } else {
+            setEmailMessage(`❌ ${result.error || 'Error al actualizar email'}`);
         }
+
+        setIsUpdatingEmail(false);
     };
 
     const startEmailEdit = () => {
@@ -108,6 +80,25 @@ export default function Profile() {
                     </div>
                 </div>
             </div>
+
+            {/* Email Completion Banner */}
+            {(!user?.email || user.email.trim() === '') && (
+                <div style={{
+                    padding: '20px',
+                    background: 'linear-gradient(135deg, var(--accent) 0%, #2d8a4e 100%)',
+                    borderRadius: '12px',
+                    border: '2px solid rgba(255,255,255,0.2)',
+                    boxShadow: '0 8px 25px rgba(46, 160, 67, 0.3)',
+                    textAlign: 'center'
+                }}>
+                    <h3 style={{ margin: '0 0 10px 0', color: 'white', fontSize: '1.2rem' }}>
+                        ⚠️ Cuenta incompleta
+                    </h3>
+                    <p style={{ margin: '0', color: 'rgba(255,255,255,0.9)', fontSize: '0.95rem' }}>
+                        Registra un email para habilitar todas las funciones de socio (Marketplace/Foro)
+                    </p>
+                </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
                 <div className="citro-card" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -230,7 +221,7 @@ export default function Profile() {
                                 ) : (
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                            {user.email}
+                                            {user?.email || 'No registrado'}
                                         </span>
                                         <button
                                             onClick={startEmailEdit}
