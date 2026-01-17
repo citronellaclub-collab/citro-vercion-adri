@@ -333,8 +333,9 @@ export default function Forum() {
 
             {/* Modal de Publicación Multimodal */}
             {showModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-                    <div style={{ background: 'var(--bg-panel)', width: '100%', maxWidth: '700px', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+                <VerificationGuard action="crear posts">
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+                        <div style={{ background: 'var(--bg-panel)', width: '100%', maxWidth: '700px', borderRadius: '16px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                         <div style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}><PenTool size={20} color="var(--accent)" /> Compartir Conocimiento</h3>
                             <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X /></button>
@@ -390,8 +391,9 @@ export default function Forum() {
                                 </button>
                             </div>
                         </form>
+                        </div>
                     </div>
-                </div>
+                </VerificationGuard>
             )}
 
             <style>{`

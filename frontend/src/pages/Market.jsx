@@ -467,8 +467,9 @@ export default function Market() {
                 )}
 
                 {tab === 'publicar' && (
-                    <div className="citro-card" style={{ maxWidth: '600px', margin: '0 auto', padding: '30px' }}>
-                        <h3 style={{ marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>📤 Nueva Publicación</h3>
+                    <VerificationGuard action="publicar productos">
+                        <div className="citro-card" style={{ maxWidth: '600px', margin: '0 auto', padding: '30px' }}>
+                            <h3 style={{ marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>📤 Nueva Publicación</h3>
                         <form onSubmit={handleCreateProduct} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <label style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Imagen del Producto</label>
@@ -532,7 +533,8 @@ export default function Market() {
                                 {uploading ? <Loader2 className="animate-spin" style={{ margin: '0 auto' }} /> : 'Publicar en el GTL'}
                             </button>
                         </form>
-                    </div>
+                        </div>
+                    </VerificationGuard>
                 )}
             </main>
 
