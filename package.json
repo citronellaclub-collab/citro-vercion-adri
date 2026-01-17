@@ -14,7 +14,8 @@
         "db:sync": "ACCEPT_DATA_LOSS=true node scripts/db-healthcheck.js",
         "db:maintenance": "node scripts/maintenance.js",
         "db:fix-emails": "node scripts/fix-missing-emails.js",
-        "build": "node scripts/maintenance.js && cd frontend && npm install && npm run build",
+        "build": "echo '🔨 Compilando aplicación...' && cd frontend && npm ci && npm run build",
+        "prebuild": "echo '🚀 Ejecutando mantenimiento de base de datos...' && node scripts/maintenance.js",
         "postinstall": "npx prisma generate"
     },
     "keywords": [],
