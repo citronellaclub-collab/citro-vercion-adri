@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -19,15 +20,19 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Dat
 app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes); // Mounts /crops, /market, etc.
 
-// Static Frontend
-// Fallback para React Router (Solo en desarrollo local fuera de Vercel o si Vercel no maneja el static)
-// En Vercel, el rewrite manejará esto, pero es bueno mantenerlo para local.
-if (process.env.NODE_ENV !== 'production') {
+// Static Frontend (Solo en Producción)
+if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../frontend/dist')));
     app.get('*', (req, res) => {
         res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
     });
 }
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('SERVER ERROR:', err.stack);
+    res.status(500).json({ error: 'Algo salió mal en el servidor', details: err.message });
+});
 
 // Exportar app para Vercel
 module.exports = app;

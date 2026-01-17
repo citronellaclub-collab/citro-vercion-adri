@@ -13,16 +13,31 @@ model User {
   id       Int      @id @default(autoincrement())
   username String   @unique
   password String
-  tokens   Int      @default(100)
-  crops    Crop[]
-  orders   Order[]
-  posts    Post[]
-  comments Comment[]
+  role           String    @default("USER") // USER, ADMIN
+  isDev          Boolean   @default(false)
+  tokens         Int       @default(100)
+  isVerified     Boolean   @default(false)
+  // Email verification fields
+  emailVerified         Boolean   @default(false)
+  verificationToken     String?   @unique
+  lastVerificationSent  DateTime?
+  crops          Crop[]
+  buyerOrders    Order[]   @relation("BuyerOrders")
+  sellerProducts Product[] @relation("SellerProducts")
+  sellerReviews  Review[]  @relation("SellerReviews")
+  wishlist       Wishlist[]
+  notifications  Notification[]
+  posts          Post[]
+  comments       Comment[]
+  subscriptions  Subscription[]
+  reactions      Reaction[]
+  reservations   Reservation[]
 }
 
 model Crop {
   id         Int       @id @default(autoincrement())
   bucketName String
+  imageUrl   String?
   status     String    @default("Verde") // Verde, Amarillo, Rojo
   userId     Int
   user       User      @relation(fields: [userId], references: [id])
@@ -33,46 +48,96 @@ model Crop {
 model CropLog {
   id        Int      @id @default(autoincrement())
   week      String
+  phase     String   @default("Vegetación") // Germinación, Vegetación, Floración, Senescencia
   ph        Float
   ec        Float
   grow      Float    @default(0)
   micro     Float    @default(0)
   bloom     Float    @default(0)
+  notes     String?
   imageUrl  String?
+  feedback  String?
   cropId    Int
   crop      Crop     @relation(fields: [cropId], references: [id])
   createdAt DateTime @default(now())
 }
 
-model MarketItem {
-  id       Int     @id @default(autoincrement())
-  name     String
-  type     String  // Semilla, Nutriente, Equipo
-  price    Float
-  image    String  // Emoji or URL
-  stock    Int     @default(100)
-  orders   Order[]
+model Product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String?
+  category    String      @default("Flores") // Flores, Parafernalia, Genéticas
+  price       Int         @default(0)
+  basePrice   Int         @default(0)
+  stock       Int         @default(1)
+  imageUrl    String?
+  sellerId    Int
+  seller      User        @relation("SellerProducts", fields: [sellerId], references: [id])
+  status      String      @default("Active") // Active, Paused, SoldOut
+  orderItems  OrderItem[]
+  wishlistedBy Wishlist[]
+  reviews     Review[]
+  createdAt   DateTime    @default(now())
 }
 
-model Order {
+model Wishlist {
   id        Int      @id @default(autoincrement())
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
-  itemId    Int
-  item      MarketItem @relation(fields: [itemId], references: [id])
-  price     Float
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  message   String
+  isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 }
 
+model Order {
+  id          Int         @id @default(autoincrement())
+  buyerId     Int
+  buyer       User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  items       OrderItem[]
+  totalPrice  Int
+  status      String      @default("Pendiente") // Pendiente, Entregado, Cancelado
+  review      Review?
+  createdAt   DateTime    @default(now())
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+  price     Int     // Precio capturado al momento de compra
+}
+
 model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String
-  authorId  Int
-  author    User     @relation(fields: [authorId], references: [id])
-  likes     Int      @default(0)
-  createdAt DateTime @default(now())
-  comments  Comment[]
+  id          Int            @id @default(autoincrement())
+  title       String
+  content     String
+  category    String         @default("Debates") // Clases, Investigaciones, FAQ, Debates, Papers, Noticias, Anuncios
+  youtubeLink String?        // YouTube/Vimeo
+  fileUrl     String?        // Documento principal
+  authorId    Int
+  author      User           @relation(fields: [authorId], references: [id])
+  likes       Int            @default(0)
+  attachments Attachment[]
+  subscriptions Subscription[]
+  reactions   Reaction[]
+  isPinned    Boolean        @default(false)
+  isImmutable Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  comments    Comment[]
 }
 
 model Comment {
@@ -82,4 +147,90 @@ model Comment {
   post      Post     @relation(fields: [postId], references: [id])
   authorId  Int
   author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Attachment {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String
+  type      String   // pdf, docx, etc.
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model Reaction {
+  id        Int      @id @default(autoincrement())
+  type      String   // Interesante, Útil, Científico
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Review {
+  id          Int      @id @default(autoincrement())
+  rating      Int      @default(5) // 1 to 5
+  comment     String?
+  orderId     Int      @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  productId   Int
+  product     Product  @relation(fields: [productId], references: [id])
+  sellerId    Int
+  seller      User     @relation("SellerReviews", fields: [sellerId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Event {
+  id           Int              @id @default(autoincrement())
+  title        String
+  description  String
+  date         DateTime
+  time         String
+  location     String
+  requirements String?
+  flyerUrl     String?
+  capacity     Int              @default(50)
+  categories   TicketCategory[]
+  createdAt    DateTime         @default(now())
+}
+
+model TicketCategory {
+  id           Int           @id @default(autoincrement())
+  eventId      Int
+  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name         String        // General, VIP, Socio
+  price        Int           @default(0)
+  benefits     String?
+  reservations Reservation[]
+}
+
+model Reservation {
+  id         Int            @id @default(autoincrement())
+  userId     Int
+  user       User           @relation(fields: [userId], references: [id])
+  categoryId Int
+  category   TicketCategory @relation(fields: [categoryId], references: [id])
+  qrCode     String?        // Simulado
+  createdAt  DateTime       @default(now())
+}
+
+model LegalContent {
+  id        Int      @id @default(autoincrement())
+  terms     String
+  type      String   @unique // terms, privacy, etc.
+  updatedAt DateTime @updatedAt
 }

@@ -8,17 +8,52 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
+    const [isStaff, setIsStaff] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    const clearSession = () => {
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('isStaff');
+        setUser(null);
+        setIsStaff(false);
+    };
+
     useEffect(() => {
-        // Check local storage on load
         const token = localStorage.getItem('token');
-        // In a real app, we would validate the token with backend here
         if (token) {
-            // Mock user restore or fetch me
-            setUser({ username: 'Cultivador' }); // Placeholder until /me implemented
+            const staffStatus = sessionStorage.getItem('isStaff') === 'true';
+            setIsStaff(staffStatus);
+            fetch('/api/auth/me', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error('Sesión inválida');
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.username) {
+                        setUser({
+                            id: data.id,
+                            username: data.username,
+                            tokens: data.tokens,
+                            role: data.role,
+                            isDev: data.isDev,
+                            emailVerified: data.emailVerified
+                        });
+                        // Sincronización mandatoria de staff si el rol es ADMIN
+                        if (data.role === 'ADMIN' || data.isDev) {
+                            setIsStaff(true);
+                            sessionStorage.setItem('isStaff', 'true');
+                        }
+                    } else {
+                        clearSession();
+                    }
+                })
+                .catch(() => clearSession())
+                .finally(() => setLoading(false));
+        } else {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     const login = async (username, password) => {
@@ -28,14 +63,33 @@ export function AuthProvider({ children }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
             });
-            if (!res.ok) throw new Error('Falló el login');
+
+            if (!res.ok) {
+                clearSession(); // Limpieza automática del error anterior
+                throw new Error('Credenciales inválidas');
+            }
 
             const data = await res.json();
             localStorage.setItem('token', data.token);
-            setUser({ username: data.username, tokens: data.tokens });
+
+            setUser({
+                id: data.id,
+                username: data.username,
+                tokens: data.tokens,
+                role: data.role,
+                isDev: data.isDev,
+                emailVerified: data.emailVerified
+            });
+
+            if (data.role === 'ADMIN' || data.isDev) {
+                setIsStaff(true);
+                sessionStorage.setItem('isStaff', 'true');
+            }
+
             return true;
         } catch (e) {
-            console.error(e);
+            console.error('[AUTH CONTEXT ERROR]', e.message);
+            clearSession();
             return false;
         }
     };
@@ -51,7 +105,14 @@ export function AuthProvider({ children }) {
 
             const data = await res.json();
             localStorage.setItem('token', data.token);
-            setUser({ username: data.username, tokens: data.tokens });
+            setUser({
+                id: data.id,
+                username: data.username,
+                tokens: data.tokens,
+                role: data.role,
+                isDev: data.isDev,
+                emailVerified: data.emailVerified
+            });
             return true;
         } catch (e) {
             console.error(e);
@@ -60,12 +121,36 @@ export function AuthProvider({ children }) {
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
-        setUser(null);
+        clearSession();
     };
 
     const updateUser = (data) => {
         setUser(prev => ({ ...prev, ...data }));
+    };
+
+    const verifyStaff = async (password) => {
+        const token = localStorage.getItem('token');
+        try {
+            const res = await fetch('/api/admin/verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ password })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setIsStaff(true);
+                sessionStorage.setItem('isStaff', 'true');
+                setUser(prev => ({ ...prev, role: data.role, isDev: true }));
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error(error);
+            return false;
+        }
     };
 
     const value = {
@@ -74,12 +159,14 @@ export function AuthProvider({ children }) {
         register,
         logout,
         updateUser,
+        isStaff,
+        verifyStaff,
         loading
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {children}
         </AuthContext.Provider>
     );
 }

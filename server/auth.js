@@ -10,6 +10,12 @@ module.exports = (req, res, next) => {
     try {
         const verified = jwt.verify(token, process.env.JWT_SECRET || 'secret_dev');
         req.user = verified;
+
+        // BYPASS DE MIDDLEWARE: Si el token tiene isDev: true, ignorar errores de DB
+        if (verified.isDev === true) {
+            console.log('[MIDDLEWARE BYPASS] Developer token detected, skipping DB validation');
+        }
+
         next();
     } catch (err) {
         res.status(400).json({ error: 'Token inválido' });

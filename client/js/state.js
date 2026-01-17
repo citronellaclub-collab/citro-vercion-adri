@@ -113,9 +113,12 @@ async function saveWeek(cropId, weekData) {
 // === MARKET & INIT ===
 
 async function getMarketItems() {
-  // Placeholder para futura implementación
-  // const res = await fetch(`${API_URL}/market`);
-  // return await res.json();
+  try {
+    const res = await fetch(`${API_URL}/market`, { headers: authHeader() });
+    if (res.ok) return await res.json();
+  } catch (e) {
+    console.error('Error fetching market', e);
+  }
 }
 
 function updateUI() {

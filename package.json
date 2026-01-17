@@ -5,8 +5,9 @@
     "main": "server/server.js",
     "scripts": {
         "start": "node server/server.js",
-        "dev": "nodemon server/server.js",
-        "client": "serve client",
+        "server": "nodemon server/server.js",
+        "frontend": "cd frontend && npm run dev",
+        "dev": "npm run server",
         "db:push": "npx prisma db push",
         "db:studio": "npx prisma studio",
         "build": "npx prisma generate && cd frontend && npm install && npm run build",
@@ -17,14 +18,18 @@
     "license": "ISC",
     "dependencies": {
         "@prisma/client": "^5.x",
+        "@vercel/blob": "^2.0.0",
+        "axios": "^1.13.2",
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
         "dotenv": "^16.3.1",
         "express": "^4.18.2",
         "jsonwebtoken": "^9.0.2",
+        "multer": "^2.0.2",
         "pg": "^8.11.3"
     },
     "devDependencies": {
+        "concurrently": "^9.2.1",
         "nodemon": "^3.0.2",
         "prisma": "^5.x",
         "serve": "^14.2.1"
