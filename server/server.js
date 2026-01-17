@@ -8,6 +8,14 @@ const apiRoutes = require('./routes/api');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Verificación de variables de entorno críticas
+console.log('🔍 Verificando variables de entorno críticas:');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✅ Configurada' : '❌ Faltante');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ Configurada' : '❌ Faltante');
+console.log('BREVO_API_KEY:', process.env.BREVO_API_KEY ? '✅ Configurada' : '❌ Faltante');
+console.log('STAFF_PASSWORD:', process.env.STAFF_PASSWORD ? '✅ Configurada' : '❌ Faltante');
+console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+
 // Middleware
 app.use(cors({
     origin: 'http://localhost:5173',
