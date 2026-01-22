@@ -2,6 +2,7 @@ console.log('🔄 AUTH CONTROLLER LOADING...');
 
 // Simplified imports to avoid loading issues
 const jwt = require('jsonwebtoken');
+const { generateVerificationToken, sendVerificationEmail, sendWelcomeEmail } = require('../services/mailService');
 
 console.log('📚 JWT IMPORT LOADED');
 

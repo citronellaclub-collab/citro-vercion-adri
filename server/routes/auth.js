@@ -35,8 +35,15 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
     console.log('🔑 LOGIN ROUTE HIT');
-    // Simplified login for now
-    res.json({ error: 'Login temporarily disabled' });
+    if (!authController?.login) {
+        return res.status(500).json({ error: 'Controller not loaded' });
+    }
+    try {
+        await authController.login(req, res);
+    } catch (error) {
+        console.error('❌ LOGIN ERROR:', error);
+        res.status(500).json({ error: 'Login execution failed' });
+    }
 });
 router.get('/me', auth, authController.getMe);
 
