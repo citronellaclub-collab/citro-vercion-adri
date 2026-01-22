@@ -11,6 +11,7 @@ import Orders from './pages/Orders';
 import Events from './pages/Events';
 import AdminPanel from './pages/AdminPanel';
 import Profile from './pages/Profile';
+import Terms from './pages/Terms';
 
 // Componente para proteger rutas
 function ProtectedRoute({ children }) {
@@ -42,7 +43,7 @@ function AppRoutes() {
                 <Route path="pedidos" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 <Route path="perfil" element={<Profile />} />
                 <Route path="admin" element={<AdminPanel />} />
-                <Route path="terminos" element={<div style={{ padding: '20px' }}><h2>📜 Términos y Condiciones</h2><p>Contrato de uso.</p></div>} />
+                <Route path="terminos" element={<Terms />} />
 
                 {/* Fallback para rutas no encontradas dentro de layout */}
                 <Route path="*" element={<Navigate to="/micultivo" replace />} />

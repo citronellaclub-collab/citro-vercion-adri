@@ -62,13 +62,11 @@ console.log('✅ AUTH ROUTES MOUNTED at /api/auth');
 app.use('/api', apiRoutes); // Mounts /crops, /market, etc.
 console.log('✅ API ROUTES MOUNTED at /api');
 
-// Static Frontend (Solo en Producción)
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../frontend/dist')));
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-    });
-}
+// Static Frontend
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
 
 // Global Error Handler
 app.use((err, req, res, next) => {
