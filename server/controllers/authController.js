@@ -456,7 +456,7 @@ exports.verifyEmail = async (req, res) => {
         }
 
         // Forzar actualización en Prisma
-        await prisma.user.update({
+        const updatedUser = await prisma.user.update({
             where: { verificationToken: token },
             data: {
                 emailVerified: true,
@@ -467,12 +467,19 @@ exports.verifyEmail = async (req, res) => {
 
         console.log('Resultado de actualización: éxito');
 
+        // Generar nuevo token JWT con datos actualizados
+        const newToken = jwt.sign(
+            { id: updatedUser.id, role: updatedUser.role, isDev: updatedUser.isDev },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
         // Enviar email de bienvenida (no bloqueante)
         sendWelcomeEmail(user.email, user.username).catch(err => {
             console.error('[EMAIL] Error enviando bienvenida:', err.message);
         });
 
-        res.redirect(`${process.env.FRONTEND_URL}?verified=success`);
+        res.redirect(`${process.env.FRONTEND_URL}?verified=success&token=${newToken}`);
 
     } catch (err) {
         console.error('[VERIFY ERROR]', err.message);

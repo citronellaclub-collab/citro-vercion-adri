@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
+import { useEffect } from 'react';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -24,6 +25,27 @@ function ProtectedRoute({ children }) {
 }
 
 function AppRoutes() {
+    const { checkAuth, user } = useAuth();
+    const location = useLocation();
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(location.search);
+        const verified = urlParams.get('verified');
+        const token = urlParams.get('token');
+
+        if (verified === 'success' && user) {
+            // Si hay un nuevo token, guardarlo
+            if (token) {
+                localStorage.setItem('token', token);
+            }
+            // Forzar refresco del perfil después de verificación
+            checkAuth().then(() => {
+                // Redirección con hard reload para limpiar estado viejo
+                window.location.href = '/menu';
+            });
+        }
+    }, [location.search, checkAuth, user]);
+
     return (
         <Routes>
             {/* Ruta pública */}

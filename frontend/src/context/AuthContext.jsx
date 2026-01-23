@@ -140,6 +140,39 @@ export function AuthProvider({ children }) {
         setUser(prev => ({ ...prev, ...data }));
     };
 
+    const checkAuth = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/auth/me`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error('Sesión inválida');
+            const data = await res.json();
+            if (data.username) {
+                setUser({
+                    id: data.id,
+                    username: data.username,
+                    email: data.email,
+                    tokens: data.tokens,
+                    role: data.role,
+                    isDev: data.isDev,
+                    emailVerified: data.emailVerified
+                });
+                if (data.role === 'ADMIN' || data.isDev) {
+                    setIsStaff(true);
+                    sessionStorage.setItem('isStaff', 'true');
+                }
+            } else {
+                clearSession();
+            }
+        } catch (error) {
+            console.error('Error refrescando auth:', error);
+            clearSession();
+        }
+    };
+
     const updateEmail = async (email) => {
         const token = localStorage.getItem('token');
         try {
@@ -193,6 +226,7 @@ export function AuthProvider({ children }) {
         logout,
         updateUser,
         updateEmail,
+        checkAuth,
         isStaff,
         verifyStaff,
         loading
