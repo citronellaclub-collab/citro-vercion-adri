@@ -47,12 +47,26 @@ exports.register = async (req, res) => {
             return res.status(500).json({ error: 'JWT_SECRET not configured' });
         }
 
+        if (!process.env.DATABASE_URL) {
+            return res.status(500).json({ error: 'DATABASE_URL not configured' });
+        }
+
         const { username, password, email } = req.body;
         console.log('📝 REQUEST BODY:', { username, hasPassword: !!password, email });
 
         // Basic validation
         if (!username?.trim() || !password || password.length < 6) {
             return res.status(400).json({ error: 'Username and password (6+ chars) required' });
+        }
+
+        // Check if email already exists
+        if (email && typeof email === 'string' && email.trim()) {
+            const existingUser = await prisma.user.findFirst({
+                where: { email: email.trim() }
+            });
+            if (existingUser) {
+                return res.status(400).json({ error: 'Email already registered' });
+            }
         }
 
         console.log('🔐 HASHING PASSWORD...');
