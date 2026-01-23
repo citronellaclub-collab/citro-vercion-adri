@@ -33,18 +33,23 @@ function AppRoutes() {
         const verified = urlParams.get('verified');
         const token = urlParams.get('token');
 
-        if (verified === 'success' && user) {
-            // Si hay un nuevo token, guardarlo
+        if (verified === 'success') {
+            // Limpiar localStorage para forzar re-autenticación
+            localStorage.clear();
+            sessionStorage.clear();
+
+            // Si hay un nuevo token de verificación, guardarlo
             if (token) {
                 localStorage.setItem('token', token);
             }
+
             // Forzar refresco del perfil después de verificación
             checkAuth().then(() => {
-                // Redirección con hard reload para limpiar estado viejo
-                window.location.href = '/menu';
+                // Limpiar URL params y redirigir sin reload
+                window.history.replaceState({}, '', '/menu');
             });
         }
-    }, [location.search, checkAuth, user]);
+    }, [location.search, checkAuth]);
 
     return (
         <Routes>

@@ -4,7 +4,7 @@ import { Lock } from 'lucide-react';
 export default function VerificationGuard({ children, action = "realizar esta acción" }) {
     const { user } = useAuth();
 
-    if (!user?.emailVerified) {
+    if (!user?.emailVerified || !user?.isVerified) {
         return (
             <div style={{
                 background: 'rgba(245, 158, 11, 0.1)',

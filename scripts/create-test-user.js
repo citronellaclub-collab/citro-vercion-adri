@@ -9,14 +9,15 @@ async function createTestUser() {
 
         // Datos del usuario de prueba
         const testUserData = {
-            username: 'testuser',
+            username: 'testuser2',
             password: await bcrypt.hash('testpass123', 10),
-            email: 'test@example.com',
+            email: 'test2@example.com',
             tokens: 100,
             role: 'USER',
             isDev: false,
-            emailVerified: true, // Para facilitar pruebas
-            isVerified: true
+            emailVerified: false,
+            isVerified: false,
+            verificationToken: 'test-token-123'
         };
 
         // Verificar si ya existe

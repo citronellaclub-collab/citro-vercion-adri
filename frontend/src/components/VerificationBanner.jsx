@@ -8,8 +8,8 @@ export default function VerificationBanner() {
     const [message, setMessage] = useState('');
     const [showBanner, setShowBanner] = useState(true);
 
-    // No mostrar si el usuario está verificado o si el banner fue cerrado
-    if (!user || user.emailVerified || !showBanner) {
+    // No mostrar si el usuario está verificado (email y socio) o si el banner fue cerrado
+    if (!user || (user.emailVerified && user.isVerified) || !showBanner) {
         return null;
     }
 

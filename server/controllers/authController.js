@@ -114,7 +114,7 @@ exports.register = async (req, res) => {
         }
 
         const token = jwt.sign(
-            { id: user.id, role: user.role, isDev: user.isDev },
+            { id: user.id, role: user.role, isDev: user.isDev, isVerified: user.isVerified },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -144,7 +144,8 @@ exports.register = async (req, res) => {
                 tokens: user.tokens,
                 role: user.role,
                 isDev: user.isDev,
-                emailVerified: user.emailVerified
+                emailVerified: user.emailVerified,
+                isVerified: user.isVerified
             },
             emailStatus: {
                 sent: emailSent,
@@ -213,8 +214,12 @@ exports.login = async (req, res) => {
             return res.status(400).json({ error: 'Contraseña incorrecta' });
         }
 
+        // Hard-check: Fetch fresh data from DB to ensure isVerified is current
+        const freshUser = await prisma.user.findUnique({ where: { id: user.id } });
+        console.log('[LOGIN] Fresh DB data:', { id: freshUser.id, isVerified: freshUser.isVerified, emailVerified: freshUser.emailVerified });
+
         const token = jwt.sign(
-            { id: user.id, role: user.role, isDev: user.isDev },
+            { id: freshUser.id, role: freshUser.role, isDev: freshUser.isDev, isVerified: freshUser.isVerified },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -229,7 +234,8 @@ exports.login = async (req, res) => {
             tokens: user.tokens,
             role: user.role,
             isDev: user.isDev,
-            emailVerified: user.emailVerified
+            emailVerified: user.emailVerified,
+            isVerified: user.isVerified
         });
 
     } catch (err) {
@@ -253,6 +259,8 @@ exports.login = async (req, res) => {
 
 exports.getMe = async (req, res) => {
     try {
+        console.log('[GET_ME] req.user from middleware:', { id: req.user.id, isVerified: req.user.isVerified, emailVerified: req.user.emailVerified, role: req.user.role });
+
         // Bypass para tokens de desarrollador
         if (req.user.isDev === true) {
             return res.json({
@@ -262,7 +270,8 @@ exports.getMe = async (req, res) => {
                 tokens: 999999,
                 role: 'ADMIN',
                 isDev: true,
-                emailVerified: true
+                emailVerified: true,
+                isVerified: true
             });
         }
 
@@ -270,6 +279,9 @@ exports.getMe = async (req, res) => {
             where: { id: req.user.id }
         });
         if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+        console.log('[GET_ME] DB user data:', { id: user.id, isVerified: user.isVerified, emailVerified: user.emailVerified, role: user.role });
+
         res.json({
             id: user.id,
             username: user.username,
@@ -277,7 +289,8 @@ exports.getMe = async (req, res) => {
             tokens: user.tokens,
             role: user.role,
             isDev: user.isDev,
-            emailVerified: user.emailVerified
+            emailVerified: user.emailVerified,
+            isVerified: user.isVerified
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -435,6 +448,17 @@ exports.updateEmail = async (req, res) => {
 
 // Nuevo endpoint: Verificar email con token
 exports.verifyEmail = async (req, res) => {
+    console.log('[VERIFY_ENDPOINT] He recibido una petición con el token:', req.query.token);
+    loadDependencies();
+    if (!prisma) {
+        console.error('[VERIFY] Prisma not loaded');
+        return res.status(500).send(`
+            <html><body>
+            <h1>Error: Prisma no cargado</h1>
+            <p>Por favor contacta al administrador.</p>
+            </body></html>
+        `);
+    }
     const token = req.query.token?.trim();
 
     try {
@@ -448,31 +472,56 @@ exports.verifyEmail = async (req, res) => {
 
         if (!user) {
             console.log('Resultado de actualización: error - token inválido');
-            return res.status(400).json({ error: "Token inválido o expirado" });
+            return res.status(400).send(`
+                <html><body>
+                <h1>Token Inválido</h1>
+                <p>El token de verificación no es válido o ha expirado.</p>
+                <p>Token recibido: ${token}</p>
+                </body></html>
+            `);
         }
 
         if (user.emailVerified) {
             console.log('Resultado de actualización: error - ya verificado');
-            return res.redirect(`${process.env.FRONTEND_URL}?verified=already`);
+            return res.send(`
+                <html><body>
+                <h1>Ya Verificado</h1>
+                <p>El usuario ${user.email} ya está verificado.</p>
+                <p>Estado en DB: isVerified=${user.isVerified}, emailVerified=${user.emailVerified}</p>
+                </body></html>
+            `);
         }
 
-        // Forzar actualización en Prisma
-        const updatedUser = await prisma.user.update({
-            where: { verificationToken: token },
-            data: {
-                emailVerified: true,
-                isVerified: true,
-                role: 'USER',
-                verificationToken: null
-            }
+        // Usar transacción para asegurar atomicidad
+        console.log('[DB_UPDATE_ATTEMPT] Query: UPDATE user SET emailVerified=true, isVerified=true, role=\'SOCIO\', verificationToken=null WHERE verificationToken=\'' + token + '\'');
+        const result = await prisma.$transaction(async (tx) => {
+            // Log antes de la actualización
+            console.log('[DB_UPDATE_ATTEMPT] User ID:', user.id, ', Old_Verified:', user.isVerified, ', Old_EmailVerified:', user.emailVerified);
+
+            // Actualizar usuario
+            const updatedUser = await tx.user.update({
+                where: { verificationToken: token },
+                data: {
+                    emailVerified: true,
+                    isVerified: true,
+                    role: 'SOCIO',
+                    verificationToken: null
+                }
+            });
+
+            // Log después de la actualización
+            console.log('[DB_UPDATE_SUCCESS] User ID:', updatedUser.id, ', New_Verified:', updatedUser.isVerified, ', New_EmailVerified:', updatedUser.emailVerified);
+
+            return updatedUser;
         });
 
-        console.log('ESTADO EN DB: User ' + updatedUser.email + ' ahora es isVerified: ' + updatedUser.isVerified);
-        console.log('Resultado de actualización: éxito');
+        // Verificar que el cambio persistió
+        const verifyDb = await prisma.user.findUnique({ where: { id: result.id } });
+        console.log('[DB_VERIFY_AFTER_TX] User ID:', verifyDb.id, ', isVerified:', verifyDb.isVerified, ', emailVerified:', verifyDb.emailVerified);
 
         // Generar nuevo token JWT con datos actualizados
         const newToken = jwt.sign(
-            { id: updatedUser.id, role: updatedUser.role, isDev: updatedUser.isDev },
+            { id: result.id, role: result.role, isDev: result.isDev, isVerified: result.isVerified },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -482,10 +531,31 @@ exports.verifyEmail = async (req, res) => {
             console.error('[EMAIL] Error enviando bienvenida:', err.message);
         });
 
-        res.redirect(`${process.env.FRONTEND_URL}?verified=success&token=${newToken}`);
+        // Página de éxito con estado
+        res.send(`
+            <html><body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h1>✅ Verificación Exitosa</h1>
+            <p>Verificación procesada para el usuario: <strong>${user.email}</strong></p>
+            <p>Estado en DB después de verificación:</p>
+            <ul>
+                <li>isVerified: <strong>${verifyDb.isVerified}</strong></li>
+                <li>emailVerified: <strong>${verifyDb.emailVerified}</strong></li>
+                <li>role: <strong>${verifyDb.role}</strong></li>
+            </ul>
+            <p>Nuevo token JWT generado: ${newToken.substring(0, 20)}...</p>
+            <p><a href="${process.env.FRONTEND_URL}?verified=success&token=${newToken}">Continuar al sitio</a></p>
+            </body></html>
+        `);
 
     } catch (err) {
-        console.error('[VERIFY ERROR]', err.message);
-        res.redirect(`${process.env.FRONTEND_URL}?verified=error`);
+        console.error('[VERIFY ERROR]', err);
+        res.status(500).send(`
+            <html><body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h1>❌ Error en Verificación</h1>
+            <p>Error: ${err.message}</p>
+            <p>Stack: ${err.stack}</p>
+            <p>Token: ${token}</p>
+            </body></html>
+        `);
     }
 };

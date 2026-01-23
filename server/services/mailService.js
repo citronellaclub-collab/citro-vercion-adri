@@ -111,15 +111,22 @@ function generateVerificationToken() {
  * Retorna resultado del envío sin lanzar errores
  */
 async function sendVerificationEmail(email, username, token) {
-    // ✅ Validación de FRONTEND_URL
-    const frontendUrl = process.env.FRONTEND_URL;
-    if (!frontendUrl) {
-        console.error('[EMAIL ERROR] FRONTEND_URL no configurada');
+    // ✅ Validación de URL (API_URL si existe, sino FRONTEND_URL)
+    let apiUrl = process.env.API_URL || process.env.FRONTEND_URL;
+    if (!apiUrl) {
+        console.error('[EMAIL ERROR] API_URL o FRONTEND_URL no configuradas');
         return { success: false, error: 'Configuración de URL incompleta' };
     }
-    
-    const normalizedFrontendUrl = frontendUrl.replace(/\/$/, '');
-    const verificationUrl = `${normalizedFrontendUrl}/api/auth/verify?token=${token}`;
+
+    // En producción, asegurar que no use localhost
+    if (process.env.NODE_ENV === 'production' && apiUrl.includes('localhost')) {
+        console.error('[EMAIL ERROR] API_URL no puede ser localhost en producción');
+        return { success: false, error: 'Configuración de URL inválida para producción' };
+    }
+
+    const normalizedApiUrl = apiUrl.replace(/\/$/, '');
+    const verificationUrl = `${normalizedApiUrl}/api/auth/verify?token=${token}`;
+    console.log('[MAIL_DEBUG] Link generado:', verificationUrl);
 
     const htmlContent = `
         <!DOCTYPE html>

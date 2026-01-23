@@ -84,7 +84,8 @@ export function AuthProvider({ children }) {
                 tokens: data.tokens,
                 role: data.role,
                 isDev: data.isDev,
-                emailVerified: data.emailVerified
+                emailVerified: data.emailVerified,
+                isVerified: data.isVerified
             });
 
             if (data.role === 'ADMIN' || data.isDev) {
@@ -123,7 +124,8 @@ export function AuthProvider({ children }) {
                 tokens: data.tokens,
                 role: data.role,
                 isDev: data.isDev,
-                emailVerified: data.emailVerified
+                emailVerified: data.emailVerified,
+                isVerified: data.isVerified
             });
             return true;
         } catch (e) {
@@ -158,7 +160,8 @@ export function AuthProvider({ children }) {
                     tokens: data.tokens,
                     role: data.role,
                     isDev: data.isDev,
-                    emailVerified: data.emailVerified
+                    emailVerified: data.emailVerified,
+                    isVerified: data.isVerified
                 });
                 if (data.role === 'ADMIN' || data.isDev) {
                     setIsStaff(true);
