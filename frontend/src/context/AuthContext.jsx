@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 const AuthContext = createContext();
 
 export function useAuth() {
@@ -23,7 +25,7 @@ export function AuthProvider({ children }) {
         if (token) {
             const staffStatus = sessionStorage.getItem('isStaff') === 'true';
             setIsStaff(staffStatus);
-            fetch('/api/auth/me', {
+            fetch(`${API_BASE}/api/auth/me`, {
                 headers: { Authorization: `Bearer ${token}` }
             })
                 .then(res => {
@@ -59,7 +61,7 @@ export function AuthProvider({ children }) {
 
     const login = async (username, password) => {
         try {
-            const res = await fetch('/api/auth/login', {
+            const res = await fetch(`${API_BASE}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -100,7 +102,7 @@ export function AuthProvider({ children }) {
 
     const register = async (username, password, email) => {
         try {
-            const res = await fetch('/api/auth/register', {
+            const res = await fetch(`${API_BASE}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password, email })
@@ -141,7 +143,7 @@ export function AuthProvider({ children }) {
     const updateEmail = async (email) => {
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch('/api/auth/update-email', {
+            const res = await fetch(`${API_BASE}/api/auth/update-email`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -162,7 +164,7 @@ export function AuthProvider({ children }) {
     const verifyStaff = async (password) => {
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch('/api/admin/verify', {
+            const res = await fetch(`${API_BASE}/api/admin/verify`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

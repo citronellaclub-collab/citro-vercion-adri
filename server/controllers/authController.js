@@ -43,6 +43,10 @@ exports.register = async (req, res) => {
             });
         }
 
+        if (!process.env.JWT_SECRET) {
+            return res.status(500).json({ error: 'JWT_SECRET not configured' });
+        }
+
         const { username, password, email } = req.body;
         console.log('📝 REQUEST BODY:', { username, hasPassword: !!password, email });
 
