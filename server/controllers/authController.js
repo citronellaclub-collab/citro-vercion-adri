@@ -438,16 +438,17 @@ exports.verifyEmail = async (req, res) => {
     const token = req.query.token?.trim();
 
     try {
-        console.log('Token recibido:', token);
+        console.log('Token from URL:', token);
         const user = await prisma.user.findFirst({
             where: { verificationToken: token }
         });
 
+        console.log('Token in DB for user:', user ? user.verificationToken : 'No user found');
         console.log('Usuario encontrado:', user ? user.username : null);
 
         if (!user) {
             console.log('Resultado de actualización: error - token inválido');
-            return res.redirect(`${process.env.FRONTEND_URL}?verified=error`);
+            return res.status(400).json({ error: "Token inválido o expirado" });
         }
 
         if (user.emailVerified) {
@@ -461,6 +462,7 @@ exports.verifyEmail = async (req, res) => {
             data: {
                 emailVerified: true,
                 isVerified: true,
+                role: 'USER',
                 verificationToken: null
             }
         });
