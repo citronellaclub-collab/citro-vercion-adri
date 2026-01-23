@@ -49,7 +49,7 @@ router.get('/me', auth, authController.getMe);
 
 // Email verification endpoints
 router.put('/update-email', auth, authController.updateEmail);
-router.post('/resend-verification', auth, authController.resendVerification);
+router.post('/resend-verification', authController.resendVerification);
 router.get('/verify', authController.verifyEmail);
 
 module.exports = router;

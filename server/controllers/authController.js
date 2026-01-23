@@ -287,9 +287,31 @@ exports.getMe = async (req, res) => {
 // Nuevo endpoint: Reenviar email de verificación
 exports.resendVerification = async (req, res) => {
     try {
-        const user = await prisma.user.findUnique({
-            where: { id: req.user.id }
-        });
+        loadDependencies();
+        if (!prisma) {
+            return res.status(500).json({ error: 'Database not loaded' });
+        }
+
+        let user;
+
+        // Check if user is authenticated
+        if (req.user && req.user.id) {
+            user = await prisma.user.findUnique({
+                where: { id: req.user.id }
+            });
+        } else {
+            // If not authenticated, require email in body
+            const { email } = req.body;
+            if (!email || !email.trim()) {
+                return res.status(400).json({
+                    error: 'Email requerido para reenviar verificación',
+                    code: 'EMAIL_REQUIRED'
+                });
+            }
+            user = await prisma.user.findFirst({
+                where: { email: email.trim() }
+            });
+        }
 
         if (!user) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -333,7 +355,12 @@ exports.resendVerification = async (req, res) => {
 
         // Enviar email
         console.log('📧 ENVIANDO A: ' + user.email);
-        await sendVerificationEmail(user.email, user.username, newToken);
+        const emailResult = await sendVerificationEmail(user.email, user.username, newToken);
+
+        if (!emailResult.success) {
+            console.error('[EMAIL ERROR]', emailResult.error);
+            return res.status(500).json({ error: 'Error al enviar email de verificación' });
+        }
 
         res.json({ message: 'Email de verificación enviado' });
 
