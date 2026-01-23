@@ -32,6 +32,8 @@ model User {
   subscriptions  Subscription[]
   reactions      Reaction[]
   reservations   Reservation[]
+
+  @@map("user")
 }
 
 model Crop {

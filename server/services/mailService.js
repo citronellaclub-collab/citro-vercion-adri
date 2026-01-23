@@ -119,7 +119,7 @@ async function sendVerificationEmail(email, username, token) {
     }
     
     const normalizedFrontendUrl = frontendUrl.replace(/\/$/, '');
-    const verificationUrl = `${normalizedFrontendUrl}/verify-email?token=${token}`;
+    const verificationUrl = `${normalizedFrontendUrl}/api/auth/verify?token=${token}`;
 
     const htmlContent = `
         <!DOCTYPE html>

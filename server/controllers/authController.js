@@ -408,25 +408,29 @@ exports.updateEmail = async (req, res) => {
 
 // Nuevo endpoint: Verificar email con token
 exports.verifyEmail = async (req, res) => {
-    const { token } = req.params;
+    const { token } = req.query;
 
     try {
-        console.log('🔍 Verificando token:', token);
+        console.log('Token recibido:', token);
         const user = await prisma.user.findFirst({
             where: { verificationToken: token }
         });
 
+        console.log('Usuario encontrado:', user ? user.username : null);
+
         if (!user) {
-            return res.status(400).json({ error: 'Token de verificación inválido o expirado' });
+            console.log('Resultado de actualización: error - token inválido');
+            return res.redirect(`${process.env.FRONTEND_URL}?verified=error`);
         }
 
         if (user.emailVerified) {
-            return res.status(400).json({ error: 'El email ya está verificado' });
+            console.log('Resultado de actualización: error - ya verificado');
+            return res.redirect(`${process.env.FRONTEND_URL}?verified=already`);
         }
 
-        // Actualizar usuario - Sincronizamos emailVerified e isVerified
+        // Forzar actualización en Prisma
         await prisma.user.update({
-            where: { id: user.id },
+            where: { verificationToken: token },
             data: {
                 emailVerified: true,
                 isVerified: true,
@@ -434,15 +438,17 @@ exports.verifyEmail = async (req, res) => {
             }
         });
 
+        console.log('Resultado de actualización: éxito');
+
         // Enviar email de bienvenida (no bloqueante)
         sendWelcomeEmail(user.email, user.username).catch(err => {
             console.error('[EMAIL] Error enviando bienvenida:', err.message);
         });
 
-        res.json({ message: 'Email verificado exitosamente' });
+        res.redirect(`${process.env.FRONTEND_URL}?verified=success`);
 
     } catch (err) {
         console.error('[VERIFY ERROR]', err.message);
-        res.status(500).json({ error: 'Error al verificar email' });
+        res.redirect(`${process.env.FRONTEND_URL}?verified=error`);
     }
 };

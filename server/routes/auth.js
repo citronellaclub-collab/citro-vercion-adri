@@ -50,6 +50,6 @@ router.get('/me', auth, authController.getMe);
 // Email verification endpoints
 router.put('/update-email', auth, authController.updateEmail);
 router.post('/resend-verification', auth, authController.resendVerification);
-router.get('/verify/:token', authController.verifyEmail);
+router.get('/verify', authController.verifyEmail);
 
 module.exports = router;
