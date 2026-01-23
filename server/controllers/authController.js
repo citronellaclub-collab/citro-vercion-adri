@@ -435,7 +435,7 @@ exports.updateEmail = async (req, res) => {
 
 // Nuevo endpoint: Verificar email con token
 exports.verifyEmail = async (req, res) => {
-    const { token } = req.query;
+    const token = req.query.token?.trim();
 
     try {
         console.log('Token recibido:', token);
@@ -465,6 +465,7 @@ exports.verifyEmail = async (req, res) => {
             }
         });
 
+        console.log('ESTADO EN DB: User ' + updatedUser.email + ' ahora es isVerified: ' + updatedUser.isVerified);
         console.log('Resultado de actualización: éxito');
 
         // Generar nuevo token JWT con datos actualizados
