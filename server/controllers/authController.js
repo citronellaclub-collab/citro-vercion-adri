@@ -70,8 +70,9 @@ exports.register = async (req, res) => {
 
         // Check if email already exists
         if (email && typeof email === 'string' && email.trim()) {
+            const normalizedEmail = email.trim().toLowerCase();
             const existingUser = await prisma.user.findFirst({
-                where: { email: email.trim() }
+                where: { email: normalizedEmail }
             });
             if (existingUser) {
                 return res.status(400).json({ error: 'Email already registered' });
@@ -95,7 +96,7 @@ exports.register = async (req, res) => {
         // Optional email
         const tokenForVerification = generateVerificationToken();
         if (email && typeof email === 'string' && email.trim()) {
-            userData.email = email.trim();
+            userData.email = email.trim().toLowerCase();
             userData.verificationToken = tokenForVerification;
             userData.lastVerificationSent = new Date();
         }
@@ -188,13 +189,14 @@ exports.login = async (req, res) => {
     try {
         loadDependencies();
         const searchValue = username.trim();
-        console.log('🔍 Buscando usuario:', searchValue);
+        const normalizedSearch = searchValue.toLowerCase();
+        console.log('[LOGIN_ATTEMPT] Buscando usuario con:', searchValue, '(normalized:', normalizedSearch + ')');
 
         const user = await prisma.user.findFirst({
             where: {
                 OR: [
                     { username: searchValue },
-                    { email: searchValue }
+                    { email: normalizedSearch }
                 ]
             }
         });
