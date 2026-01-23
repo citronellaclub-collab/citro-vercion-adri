@@ -471,6 +471,7 @@ exports.verifyEmail = async (req, res) => {
 
         console.log('Token in DB for user:', user ? user.verificationToken : 'No user found');
         console.log('Usuario encontrado:', user ? user.username : null);
+        console.log('[DEBUG] ¿El usuario existe antes de verificar?:', !!user, 'Email:', user?.email, 'ID:', user?.id);
 
         if (!user) {
             console.log('Resultado de actualización: error - token inválido');
@@ -495,27 +496,42 @@ exports.verifyEmail = async (req, res) => {
         }
 
         // Usar transacción para asegurar atomicidad
-        console.log('[DB_UPDATE_ATTEMPT] Query: UPDATE user SET emailVerified=true, isVerified=true, role=\'SOCIO\', verificationToken=null WHERE verificationToken=\'' + token + '\'');
-        const result = await prisma.$transaction(async (tx) => {
-            // Log antes de la actualización
-            console.log('[DB_UPDATE_ATTEMPT] User ID:', user.id, ', Old_Verified:', user.isVerified, ', Old_EmailVerified:', user.emailVerified);
+        console.log('[DB_UPDATE_ATTEMPT] Query: UPDATE user SET emailVerified=true, isVerified=true, role=\'SOCIO\', verificationToken=null WHERE id=' + user.id);
+        let result;
+        try {
+            result = await prisma.$transaction(async (tx) => {
+                // Log antes de la actualización
+                console.log('[DB_UPDATE_ATTEMPT] User ID:', user.id, ', Old_Verified:', user.isVerified, ', Old_EmailVerified:', user.emailVerified);
 
-            // Actualizar usuario
-            const updatedUser = await tx.user.update({
-                where: { verificationToken: token },
-                data: {
-                    emailVerified: true,
-                    isVerified: true,
-                    role: 'SOCIO',
-                    verificationToken: null
-                }
+                // Actualizar usuario por ID para evitar conflictos
+                const updatedUser = await tx.user.update({
+                    where: { id: user.id },
+                    data: {
+                        emailVerified: true,
+                        isVerified: true,
+                        role: 'SOCIO',
+                        verificationToken: null
+                    }
+                });
+
+                // Log después de la actualización
+                console.log('[DB_UPDATE_SUCCESS] User ID:', updatedUser.id, ', New_Verified:', updatedUser.isVerified, ', New_EmailVerified:', updatedUser.emailVerified);
+
+                return updatedUser;
             });
-
-            // Log después de la actualización
-            console.log('[DB_UPDATE_SUCCESS] User ID:', updatedUser.id, ', New_Verified:', updatedUser.isVerified, ', New_EmailVerified:', updatedUser.emailVerified);
-
-            return updatedUser;
-        });
+        } catch (dbError) {
+            console.error('[PRISMA_UPDATE_ERROR]', dbError);
+            return res.status(500).send(`
+                <html><body style="font-family: Arial, sans-serif; padding: 20px;">
+                <h1>❌ Error de Base de Datos en Verificación</h1>
+                <p>Error: ${dbError.message}</p>
+                <p>Code: ${dbError.code}</p>
+                <p>Meta: ${JSON.stringify(dbError.meta)}</p>
+                <p>Token: ${token}</p>
+                <p>User ID: ${user.id}</p>
+                </body></html>
+            `);
+        }
 
         // Verificar que el cambio persistió
         const verifyDb = await prisma.user.findUnique({ where: { id: result.id } });
