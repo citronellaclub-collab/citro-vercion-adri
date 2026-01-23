@@ -51,6 +51,15 @@ exports.register = async (req, res) => {
             return res.status(500).json({ error: 'DATABASE_URL not configured' });
         }
 
+        // Silent connection test
+        try {
+            await prisma.$connect();
+            console.log('✅ Database connection successful');
+        } catch (connectError) {
+            console.error('❌ Database connection failed:', connectError.message);
+            return res.status(500).json({ error: 'DATABASE_URL configuration error' });
+        }
+
         const { username, password, email } = req.body;
         console.log('📝 REQUEST BODY:', { username, hasPassword: !!password, email });
 
@@ -112,12 +121,17 @@ exports.register = async (req, res) => {
 
         console.log('🎫 TOKEN GENERATED');
 
-        // Send email (background)
+        // Send email
+        let emailSent = false;
+        let emailError = null;
         if (userData.email) {
             console.log('📧 ENVIANDO A: ' + userData.email);
-            sendVerificationEmail(userData.email, userData.username, tokenForVerification).catch(err => {
-                console.error('[AUTH] Background email send failed:', err.message);
-            });
+            const result = await sendVerificationEmail(userData.email, userData.username, tokenForVerification);
+            emailSent = result.success;
+            if (!result.success) {
+                emailError = result.error;
+                console.error('[AUTH] Email send failed:', emailError);
+            }
         }
 
         res.json({
@@ -131,7 +145,12 @@ exports.register = async (req, res) => {
                 role: user.role,
                 isDev: user.isDev,
                 emailVerified: user.emailVerified
-            }
+            },
+            emailStatus: {
+                sent: emailSent,
+                error: emailError
+            },
+            redirect: '/menu'
         });
 
     } catch (err) {
@@ -146,6 +165,7 @@ exports.register = async (req, res) => {
             meta: err.meta,
             stack: err.stack?.substring(0, 200)
         });
+        console.dir(err);
 
         res.status(500).json({
             error: 'Registration failed',
