@@ -135,6 +135,11 @@ exports.register = async (req, res) => {
         });
 
     } catch (err) {
+        if (err.code === 'P2002') {
+            console.log('🔍 P2002 detected: uniqueness violation');
+            return res.status(400).json({ error: 'Username or email already exists' });
+        }
+
         console.error('❌ REGISTER ERROR:', {
             message: err.message,
             code: err.code,

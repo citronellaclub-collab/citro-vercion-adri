@@ -117,8 +117,9 @@ async function sendVerificationEmail(email, username, token) {
         console.error('[EMAIL ERROR] FRONTEND_URL no configurada');
         return { success: false, error: 'Configuración de URL incompleta' };
     }
-
-    const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
+    
+    const normalizedFrontendUrl = frontendUrl.replace(/\/$/, '');
+    const verificationUrl = `${normalizedFrontendUrl}/verify-email?token=${token}`;
 
     const htmlContent = `
         <!DOCTYPE html>
