@@ -4,3 +4,8 @@ dist/
 .DS_Store
 coverage/
 .vscode/
+*.log
+push_error*
+.prisma/
+bin/
+obj/

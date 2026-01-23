@@ -4,7 +4,7 @@ const crypto = require('crypto');
 // Configuración de Brevo API
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || 'noreply@citronellaclub.com';
+const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || 'citronellaclub@gmail.com';
 const SENDER_NAME = 'Citronella Club';
 
 /**
@@ -42,11 +42,12 @@ async function sendEmail({ to, subject, htmlContent }) {
                     'api-key': BREVO_API_KEY,
                     'content-type': 'application/json'
                 },
-                timeout: 10000 // 10 segundos timeout
+                timeout: 10000
             }
         );
 
         console.log(`[EMAIL] ✅ Enviado exitosamente a ${to}: ${subject}`);
+        console.log('[BREVO RESPONSE DATA]:', JSON.stringify(response.data, null, 2));
         return { success: true, messageId: response.data.messageId };
 
     } catch (error) {

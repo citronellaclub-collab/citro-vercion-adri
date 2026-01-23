@@ -484,7 +484,7 @@ stateDiagram-v2
 
 ```env
 # Brevo API
-BREVO_API_KEY="xkeysib-..."
+BREVO_API_KEY="xkeysib-YOUR_API_KEY_HERE"
 BREVO_SENDER_EMAIL="noreply@citronellaclub.com"
 
 # Frontend URL (para links)

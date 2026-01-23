@@ -66,8 +66,11 @@ exports.register = async (req, res) => {
         };
 
         // Optional email
+        const tokenForVerification = generateVerificationToken();
         if (email && typeof email === 'string' && email.trim()) {
             userData.email = email.trim();
+            userData.verificationToken = tokenForVerification;
+            userData.lastVerificationSent = new Date();
         }
 
         console.log('💾 CREATING USER WITH DATA:', userData);
@@ -102,6 +105,14 @@ exports.register = async (req, res) => {
         );
 
         console.log('🎫 TOKEN GENERATED');
+
+        // Send email (background)
+        if (userData.email) {
+            console.log('📧 ENVIANDO A: ' + userData.email);
+            sendVerificationEmail(userData.email, userData.username, tokenForVerification).catch(err => {
+                console.error('[AUTH] Background email send failed:', err.message);
+            });
+        }
 
         res.json({
             success: true,
@@ -143,6 +154,7 @@ exports.login = async (req, res) => {
     }
 
     try {
+        loadDependencies();
         const searchValue = username.trim();
         console.log('🔍 Buscando usuario:', searchValue);
 
@@ -150,14 +162,15 @@ exports.login = async (req, res) => {
             where: {
                 OR: [
                     { username: searchValue },
-                    ...(searchValue.includes('@') ? [{ email: searchValue }] : [])
+                    { email: searchValue }
                 ]
             }
         });
 
-        console.log('👤 Usuario encontrado:', user ? { id: user.id, username: user.username } : 'NO ENCONTRADO');
+        console.log('👤 Usuario encontrado:', user ? { id: user.id, username: user.username, email: user.email } : '❌ NO ENCONTRADO para: ' + searchValue);
 
         if (!user) {
+            console.log('🔍 DEBUG: Usuarios existentes en DB:', await prisma.user.count());
             return res.status(400).json({ error: 'Usuario no encontrado' });
         }
 
@@ -288,6 +301,7 @@ exports.resendVerification = async (req, res) => {
         });
 
         // Enviar email
+        console.log('📧 ENVIANDO A: ' + user.email);
         await sendVerificationEmail(user.email, user.username, newToken);
 
         res.json({ message: 'Email de verificación enviado' });
@@ -313,8 +327,8 @@ exports.updateEmail = async (req, res) => {
     }
 
     try {
-        // Verificar si el email ya está en uso por otro usuario
-        const existingUser = await prisma.user.findUnique({
+        // Verificar si el email ya está en uso por otro usuario (usando findFirst ya que email no es unique en schema)
+        const existingUser = await prisma.user.findFirst({
             where: { email: email.trim() }
         });
 
@@ -335,6 +349,7 @@ exports.updateEmail = async (req, res) => {
 
         // Enviar email de verificación para el nuevo email (no bloqueante)
         const verificationToken = generateVerificationToken();
+        const finalEmail = email.trim();
         await prisma.user.update({
             where: { id: req.user.id },
             data: {
@@ -343,7 +358,8 @@ exports.updateEmail = async (req, res) => {
             }
         });
 
-        sendVerificationEmail(email.trim(), updatedUser.username, verificationToken).catch(err => {
+        console.log('📧 ENVIANDO A: ' + finalEmail);
+        sendVerificationEmail(finalEmail, updatedUser.username, verificationToken).catch(err => {
             console.error('[EMAIL] Error enviando verificación para email actualizado:', err.message);
         });
 
@@ -364,7 +380,8 @@ exports.verifyEmail = async (req, res) => {
     const { token } = req.params;
 
     try {
-        const user = await prisma.user.findUnique({
+        console.log('🔍 Verificando token:', token);
+        const user = await prisma.user.findFirst({
             where: { verificationToken: token }
         });
 
@@ -376,11 +393,12 @@ exports.verifyEmail = async (req, res) => {
             return res.status(400).json({ error: 'El email ya está verificado' });
         }
 
-        // Actualizar usuario
+        // Actualizar usuario - Sincronizamos emailVerified e isVerified
         await prisma.user.update({
             where: { id: user.id },
             data: {
                 emailVerified: true,
+                isVerified: true,
                 verificationToken: null
             }
         });
