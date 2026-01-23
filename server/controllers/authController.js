@@ -83,19 +83,7 @@ exports.register = async (req, res) => {
             console.log('✅ USER CREATED IN DB:', { id: user.id, username: user.username });
         } catch (dbError) {
             console.error('❌ DB CREATE FAILED:', dbError.message);
-
-            // Fallback: Create mock user for testing
-            console.log('🔄 FALLBACK: Creating mock user...');
-            user = {
-                id: Date.now(),
-                username: userData.username,
-                email: userData.email || null,
-                tokens: userData.tokens,
-                role: userData.role,
-                isDev: userData.isDev,
-                emailVerified: userData.emailVerified
-            };
-            console.log('✅ MOCK USER CREATED:', { id: user.id, username: user.username });
+            throw dbError; // Re-throw to be caught by outer handler
         }
 
         const token = jwt.sign(
