@@ -1,9 +1,15 @@
 import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import LoginForm from '../components/auth/LoginForm';
 import RegisterForm from '../components/auth/RegisterForm';
 
 export default function Login() {
+    const { user, loading } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
+
+    if (loading) return <div style={{ padding: '20px', color: '#8b949e' }}>Verificando sesión...</div>;
+    if (user) return <Navigate to="/micultivo" replace />;
 
     return (
         <div style={{

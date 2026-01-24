@@ -21,6 +21,69 @@ export function AuthProvider({ children }) {
     };
 
     useEffect(() => {
+        // Check for manual login flag
+        const urlParams = new URLSearchParams(window.location.search);
+        const manualLogin = urlParams.get('manual') === '1';
+
+        if (manualLogin) {
+            // Manual login mode: don't auto-login
+            const token = localStorage.getItem('token');
+            if (token) {
+                const staffStatus = sessionStorage.getItem('isStaff') === 'true';
+                setIsStaff(staffStatus);
+                fetch(`${API_BASE}/api/auth/me`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Sesión inválida');
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (data.username) {
+                            setUser({
+                                id: data.id,
+                                username: data.username,
+                                email: data.email,
+                                tokens: data.tokens,
+                                role: data.role,
+                                isDev: data.isDev,
+                                emailVerified: data.emailVerified
+                            });
+                            // Sincronización mandatoria de staff si el rol es ADMIN
+                            if (data.role === 'ADMIN' || data.isDev) {
+                                setIsStaff(true);
+                                sessionStorage.setItem('isStaff', 'true');
+                            }
+                        } else {
+                            clearSession();
+                        }
+                    })
+                    .catch(() => clearSession())
+                    .finally(() => setLoading(false));
+            } else {
+                setLoading(false);
+            }
+            return;
+        }
+
+        // TEST VERSION: Auto-login with test user, bypassing authentication
+        // Clear any existing session
+        localStorage.removeItem('token');
+        sessionStorage.removeItem('isStaff');
+        setUser({
+            id: 8,
+            username: 'testuser2',
+            email: 'test2@example.com',
+            tokens: 100,
+            role: 'USER',
+            isDev: false,
+            emailVerified: true,
+            isVerified: true
+        });
+        setIsStaff(false);
+        setLoading(false);
+
+        /*
         const token = localStorage.getItem('token');
         if (token) {
             const staffStatus = sessionStorage.getItem('isStaff') === 'true';
@@ -57,6 +120,7 @@ export function AuthProvider({ children }) {
         } else {
             setLoading(false);
         }
+        */
     }, []);
 
     const login = async (username, password) => {
