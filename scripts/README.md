@@ -64,6 +64,16 @@ Crea un usuario de prueba para desarrollo:
 
 Corrige problemas específicos con emails nulos en cuentas existentes.
 
+### 👤 Verificación de un usuario específico
+
+#### `verify-user.js`
+
+**Comando:** `node scripts/verify-user.js --email <email> --confirm`
+
+Verifica un único usuario por email. Establece `emailVerified: true` y borra `verificationToken`.
+
+**Uso seguro:** ejecuta primero sin `--confirm` para ver la acción (modo dry-run), y luego con `--confirm` para aplicar el cambio.
+
 ## 🚀 Flujo de Solución de Problemas
 
 ### Si hay errores 500 en autenticación:
